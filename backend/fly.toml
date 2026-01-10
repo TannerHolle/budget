@@ -4,7 +4,7 @@
 #
 
 app = "budget-bitter-sun-4053"
-primary_region = "iad"
+primary_region = "sjc"
 
 [build]
 

@@ -19,10 +19,12 @@ app.use('/api/categories', require('./routes/categories'));
 app.use('/api/expenses', require('./routes/expenses'));
 
 // Connect to MongoDB (non-blocking - server will start even if DB fails)
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/budget', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
+if (!process.env.MONGODB_URI) {
+  console.error('MONGODB_URI environment variable is required');
+  process.exit(1);
+}
+
+mongoose.connect(process.env.MONGODB_URI)
 .then(() => console.log('MongoDB connected'))
 .catch(err => {
   console.error('MongoDB connection error:', err);
