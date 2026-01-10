@@ -18,15 +18,21 @@ app.get('/health', (req, res) => {
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/expenses', require('./routes/expenses'));
 
-// Connect to MongoDB
+// Connect to MongoDB (non-blocking - server will start even if DB fails)
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/budget', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 })
 .then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
+.catch(err => {
+  console.error('MongoDB connection error:', err);
+  // Don't exit - let server start anyway
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
+}).on('error', (err) => {
+  console.error('Server error:', err);
+  process.exit(1);
 });
