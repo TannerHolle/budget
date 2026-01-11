@@ -8,7 +8,7 @@ const jwt = require('jsonwebtoken');
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, inviteCode } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -20,12 +20,60 @@ router.post('/register', async (req, res) => {
     const user = new User({ email, password, name });
     await user.save();
 
-    // Create default budget for user
-    const budget = new Budget({
-      name: `${name}'s Budget`,
-      owner: user._id
-    });
-    await budget.save();
+    let budget;
+    let budgetId;
+
+    // If invite token provided, add user to that budget
+    if (inviteCode) {
+      const Invite = require('../models/Invite');
+      const invite = await Invite.findOne({ 
+        token: inviteCode,
+        used: false,
+        expiresAt: { $gt: new Date() }
+      }).populate('budgetId');
+
+      if (!invite) {
+        return res.status(400).json({ error: 'Invalid or expired invite link' });
+      }
+
+      // Verify email matches
+      if (invite.email.toLowerCase() !== email.toLowerCase()) {
+        return res.status(400).json({ error: 'This invite was sent to a different email address' });
+      }
+
+      budget = invite.budgetId;
+      
+      // Check if user is already a member
+      const alreadyMember = budget.members.some(
+        m => m.user && m.user.toString() === user._id.toString()
+      );
+      if (alreadyMember) {
+        // Mark invite as used even though already member
+        invite.used = true;
+        await invite.save();
+        budgetId = budget._id;
+      } else {
+        // Add user to budget
+        budget.members.push({
+          user: user._id,
+          role: 'member'
+        });
+        await budget.save();
+        
+        // Mark invite as used
+        invite.used = true;
+        await invite.save();
+        budgetId = budget._id;
+      }
+    } else {
+      // Create default budget for user
+      budget = new Budget({
+        name: `${name}'s Budget`,
+        owner: user._id
+      });
+      await budget.save();
+      budgetId = budget._id;
+    }
 
     // Generate token
     const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
@@ -37,7 +85,7 @@ router.post('/register', async (req, res) => {
         email: user.email,
         name: user.name
       },
-      budgetId: budget._id
+      budgetId: budgetId
     });
   } catch (error) {
     res.status(400).json({ error: error.message });

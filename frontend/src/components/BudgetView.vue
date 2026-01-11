@@ -22,6 +22,7 @@
       @edit-category="editCategory"
       @delete-category="handleDeleteCategory"
       @reorder-categories="handleReorderCategories"
+      @invite-user="showInviteUserModal = true"
     />
 
     <!-- This Month's Expenses -->
@@ -69,6 +70,13 @@
       @save="saveExpense"
       @save-and-create-another="saveExpenseAndCreateAnother"
     />
+
+    <!-- Invite User Modal -->
+    <InviteUserModal
+      :show="showInviteUserModal"
+      :budget-id="selectedBudgetId"
+      @close="closeInviteUserModal"
+    />
   </div>
 </template>
 
@@ -86,7 +94,7 @@ import {
   updateExpense,
   deleteExpense,
   getExpensesByCategory,
-  getExpenseMonths
+  getExpenseMonths,
 } from '../api/api'
 import SummaryCards from './SummaryCards.vue'
 import BudgetTable from './BudgetTable.vue'
@@ -94,6 +102,7 @@ import ExpensesList from './ExpensesList.vue'
 import CategoryModal from './CategoryModal.vue'
 import CategoryExpensesModal from './CategoryExpensesModal.vue'
 import ExpenseModal from './ExpenseModal.vue'
+import InviteUserModal from './InviteUserModal.vue'
 
 export default {
   name: 'BudgetView',
@@ -103,7 +112,8 @@ export default {
     ExpensesList,
     CategoryModal,
     CategoryExpensesModal,
-    ExpenseModal
+    ExpenseModal,
+    InviteUserModal
   },
   data() {
     const now = new Date()
@@ -116,6 +126,7 @@ export default {
       expenseMonths: [],
       showAddCategoryModal: false,
       showAddExpenseModal: false,
+      showInviteUserModal: false,
       editingCategory: null,
       editingExpense: null,
       hasMultipleUsers: false,
@@ -445,6 +456,9 @@ export default {
         date: new Date().toISOString().split('T')[0]
       }
       this.selectedCategoryName = ''
+    },
+    closeInviteUserModal() {
+      this.showInviteUserModal = false
     }
   },
   mounted() {

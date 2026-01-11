@@ -39,6 +39,8 @@ export const getCurrentUser = () => api.get('/auth/me')
 export const getBudgets = () => api.get('/budgets')
 export const getBudget = (id) => api.get(`/budgets/${id}`)
 export const createBudget = (data) => api.post('/budgets', data)
+export const getInviteCode = (budgetId) => api.get(`/budgets/${budgetId}/invite-code`)
+export const regenerateInviteCode = (budgetId) => api.post(`/budgets/${budgetId}/regenerate-invite-code`)
 export const inviteToBudget = (budgetId, email) => api.post(`/budgets/${budgetId}/invite`, { email })
 export const removeMember = (budgetId, userId) => api.delete(`/budgets/${budgetId}/members/${userId}`)
 

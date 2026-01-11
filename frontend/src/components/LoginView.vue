@@ -4,7 +4,7 @@
       <h1>Budget Tracker</h1>
       <div class="auth-tabs">
         <button 
-          @click="isLogin = true" 
+          @click="switchToLogin" 
           :class="{ active: isLogin }"
           class="tab-btn"
         >
@@ -57,6 +57,9 @@
             <span>Remember me</span>
           </label>
         </div>
+        <div v-if="inviteCode && !isLogin" class="invite-notice">
+          You're joining a shared budget!
+        </div>
         <div v-if="error" class="error-message">
           {{ error }}
         </div>
@@ -78,6 +81,7 @@ export default {
       isLogin: true,
       loading: false,
       error: '',
+      inviteCode: null,
       form: {
         name: '',
         email: '',
@@ -86,7 +90,25 @@ export default {
       }
     }
   },
+  mounted() {
+    // Check for invite code in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('invite')
+    if (code) {
+      this.inviteCode = code
+      // Switch to sign up if invite code is present
+      this.isLogin = false
+    }
+  },
   methods: {
+    switchToLogin() {
+      this.isLogin = true
+      this.inviteCode = null
+      // Clear invite token from URL when switching to login
+      if (window.location.search.includes('invite=')) {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
+    },
     async handleSubmit() {
       this.loading = true
       this.error = ''
@@ -103,7 +125,8 @@ export default {
           res = await register({
             name: this.form.name,
             email: this.form.email,
-            password: this.form.password
+            password: this.form.password,
+            inviteCode: this.inviteCode
           })
         }
         
@@ -204,6 +227,16 @@ export default {
   height: 1rem;
   cursor: pointer;
   accent-color: #475569;
+}
+
+.invite-notice {
+  background: #dbeafe;
+  color: #1e40af;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  text-align: center;
+  font-weight: 500;
 }
 
 .error-message {

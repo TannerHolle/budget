@@ -30,12 +30,8 @@ export default {
   },
   data() {
     return {
-      user: null
-    }
-  },
-  computed: {
-    isAuthenticated() {
-      return !!localStorage.getItem('token')
+      user: null,
+      isAuthenticated: !!localStorage.getItem('token')
     }
   },
   mounted() {
@@ -50,13 +46,14 @@ export default {
     }
     
     // Try to get current user if token exists but user doesn't
-    if (localStorage.getItem('token') && !this.user) {
+    if (this.isAuthenticated && !this.user) {
       this.loadCurrentUser()
     }
   },
   methods: {
     handleLogin() {
       // Reload user after login
+      this.isAuthenticated = true
       const userStr = localStorage.getItem('user')
       if (userStr) {
         try {
@@ -71,6 +68,12 @@ export default {
       localStorage.removeItem('user')
       localStorage.removeItem('budgetId')
       this.user = null
+      this.isAuthenticated = false
+      
+      // Clear invite token from URL and redirect to clean login page
+      if (window.location.search.includes('invite=')) {
+        window.history.replaceState({}, '', window.location.pathname)
+      }
     },
     async loadCurrentUser() {
       try {
@@ -84,6 +87,7 @@ export default {
         localStorage.removeItem('user')
         localStorage.removeItem('budgetId')
         this.user = null
+        this.isAuthenticated = false
       }
     }
   }

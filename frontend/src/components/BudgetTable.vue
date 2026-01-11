@@ -13,6 +13,7 @@
           <div v-if="showSettingsMenu" class="settings-dropdown">
             <button @click="handleAddCategory" class="dropdown-item">Add Category</button>
             <button @click="handleToggleReorder" class="dropdown-item">Reorder Categories</button>
+            <button @click="handleInviteUser" class="dropdown-item">Invite User</button>
           </div>
         </div>
         <button @click="$emit('add-expense')" class="btn btn-primary">
@@ -205,6 +206,10 @@ export default {
         this.dragOverIndex = null
         this.isDragging = false
       }
+    },
+    handleInviteUser() {
+      this.showSettingsMenu = false
+      this.$emit('invite-user')
     },
     exitReorderMode() {
       this.reorderMode = false
