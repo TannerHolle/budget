@@ -166,20 +166,20 @@ export default {
 
 <style scoped>
 .month-select {
-  padding: 0.375rem 0.625rem;
+  padding: 0.25rem 0.5rem;
   border: 2px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .month-display {
-  padding: 0.375rem 0.625rem;
+  padding: 0.25rem 0.5rem;
   border: 2px solid #e5e7eb;
   border-radius: 6px;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   background: white;
   color: #374151;
   display: inline-block;
@@ -194,8 +194,8 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
-  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
@@ -206,8 +206,8 @@ export default {
 }
 
 .budget-card-actions .btn {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.8125rem;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.75rem;
 }
 
 .budget-table {
@@ -221,10 +221,10 @@ export default {
 }
 
 .budget-table th {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.5rem;
   text-align: left;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -264,38 +264,38 @@ export default {
 }
 
 .budget-table td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.5rem;
   vertical-align: middle;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .category-name {
   font-weight: 600;
   color: #111827;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .rollover-badge {
-  margin-left: 0.375rem;
+  margin-left: 0.25rem;
   color: #475569;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   font-weight: 600;
 }
 
 .rollover-legend {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
   border-top: 1px solid #e5e7eb;
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   color: #6b7280;
 }
 
 .rollover-legend .rollover-badge {
   margin-left: 0;
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .legend-text {
@@ -309,10 +309,10 @@ export default {
 .actual-value {
   background: #dcfce7;
   color: #059669;
-  padding: 0.125rem 0.375rem;
-  border-radius: 4px;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
   font-weight: 600;
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   display: inline-block;
 }
 
@@ -327,9 +327,9 @@ export default {
 }
 
 .total-row td {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.5rem;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
 }
 
 .actions {

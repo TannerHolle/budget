@@ -16,21 +16,21 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 0.75rem;
+  padding: 1rem;
 }
 
 @media (min-width: 768px) {
   .container {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 }
 
 .card {
   background: white;
   border-radius: 8px;
-  padding: 1rem;
+  padding: 0.75rem;
   margin-bottom: 0.75rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }

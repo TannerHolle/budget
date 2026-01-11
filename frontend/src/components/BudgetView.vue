@@ -426,7 +426,7 @@ export default {
 
 <style scoped>
 .budget-view {
-  max-width: 1400px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 </style>

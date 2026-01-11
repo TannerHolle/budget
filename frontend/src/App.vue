@@ -105,14 +105,14 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  max-width: 1200px;
+  max-width: 1000px;
   margin: 0 auto;
-  padding: 0 0.75rem;
+  padding: 0 1rem;
 }
 
 @media (min-width: 768px) {
   .navbar .container {
-    padding: 0 1rem;
+    padding: 0 1.5rem;
   }
 }
 
