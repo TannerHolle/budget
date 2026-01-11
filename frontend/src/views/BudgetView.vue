@@ -60,6 +60,7 @@
           >
             <td>
               <span class="category-name">{{ item.category.name }}</span>
+              <span v-if="item.category.rollover" class="rollover-badge" title="Rollover enabled">↻</span>
             </td>
             <td>
               <span v-if="item.budget > 0">${{ item.budget.toFixed(2) }}</span>
@@ -82,7 +83,13 @@
               <span v-else class="empty-value">0.0%</span>
             </td>
             <td class="actions">
-              <button @click="editCategory(item.category)" class="btn-icon" title="Edit">✏️</button>
+              <div class="menu-container">
+                <button @click.stop="toggleCategoryMenu(item.category._id)" class="btn-menu" title="Menu">⋯</button>
+                <div v-if="openCategoryMenu === item.category._id" class="dropdown-menu">
+                  <button @click="editCategory(item.category); closeCategoryMenu()" class="dropdown-item">Edit</button>
+                  <button @click="handleDeleteCategory(item.category); closeCategoryMenu()" class="dropdown-item delete">Delete</button>
+                </div>
+              </div>
             </td>
           </tr>
           <tr class="total-row">
@@ -123,7 +130,16 @@
               </p>
             </div>
           </div>
-          <div class="expense-amount">${{ expense.amount.toFixed(2) }}</div>
+          <div class="expense-actions">
+            <div class="expense-amount">${{ expense.amount.toFixed(2) }}</div>
+            <div class="menu-container">
+              <button @click.stop="toggleExpenseMenu(expense._id)" class="btn-menu" title="Menu">⋯</button>
+              <div v-if="openExpenseMenu === expense._id" class="dropdown-menu">
+                <button @click="editExpense(expense); closeExpenseMenu()" class="dropdown-item">Edit</button>
+                <button @click="handleDeleteExpense(expense); closeExpenseMenu()" class="dropdown-item delete">Delete</button>
+              </div>
+            </div>
+          </div>
         </div>
         <p v-if="recentExpenses.length === 0" class="empty-state">
           No expenses yet. Add your first expense!
@@ -151,6 +167,12 @@
               min="0"
               v-model.number="categoryForm.budget"
             />
+          </div>
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" v-model="categoryForm.rollover" />
+              <span>Rollover unused budget to next month</span>
+            </label>
           </div>
           <div class="modal-actions">
             <button type="button" @click="closeCategoryModal" class="btn btn-secondary">
@@ -218,7 +240,7 @@
 </template>
 
 <script>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import {
   getCategories,
   createCategory,
@@ -242,6 +264,8 @@ export default {
     const showAddExpenseModal = ref(false)
     const editingCategory = ref(null)
     const editingExpense = ref(null)
+    const openCategoryMenu = ref(null)
+    const openExpenseMenu = ref(null)
 
     const now = new Date()
     const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
@@ -260,7 +284,8 @@ export default {
 
     const categoryForm = ref({
       name: '',
-      budget: 0
+      budget: 0,
+      rollover: false
     })
 
     const expenseForm = ref({
@@ -333,9 +358,39 @@ export default {
       editingCategory.value = category
       categoryForm.value = {
         name: category.name,
-        budget: category.budget || 0
+        budget: category.budget || 0,
+        rollover: category.rollover || false
       }
       showAddCategoryModal.value = true
+    }
+
+    const editExpense = (expense) => {
+      editingExpense.value = expense
+      expenseForm.value = {
+        description: expense.description,
+        amount: expense.amount,
+        category: expense.category._id,
+        date: new Date(expense.date).toISOString().split('T')[0]
+      }
+      showAddExpenseModal.value = true
+    }
+
+    const toggleCategoryMenu = (categoryId) => {
+      openCategoryMenu.value = openCategoryMenu.value === categoryId ? null : categoryId
+      openExpenseMenu.value = null
+    }
+
+    const toggleExpenseMenu = (expenseId) => {
+      openExpenseMenu.value = openExpenseMenu.value === expenseId ? null : expenseId
+      openCategoryMenu.value = null
+    }
+
+    const closeCategoryMenu = () => {
+      openCategoryMenu.value = null
+    }
+
+    const closeExpenseMenu = () => {
+      openExpenseMenu.value = null
     }
 
     const saveExpense = async () => {
@@ -356,12 +411,37 @@ export default {
       }
     }
 
+    const handleDeleteCategory = async (category) => {
+      if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all expenses in this category.`)) {
+        try {
+          await deleteCategory(category._id)
+          await loadData()
+        } catch (error) {
+          console.error('Error deleting category:', error)
+          alert('Error deleting category. Please try again.')
+        }
+      }
+    }
+
+    const handleDeleteExpense = async (expense) => {
+      if (confirm(`Are you sure you want to delete this expense: "${expense.description}"?`)) {
+        try {
+          await deleteExpense(expense._id)
+          await loadData()
+        } catch (error) {
+          console.error('Error deleting expense:', error)
+          alert('Error deleting expense. Please try again.')
+        }
+      }
+    }
+
     const closeCategoryModal = () => {
       showAddCategoryModal.value = false
       editingCategory.value = null
       categoryForm.value = {
         name: '',
-        budget: 0
+        budget: 0,
+        rollover: false
       }
     }
 
@@ -384,8 +464,21 @@ export default {
       })
     }
 
+    // Close menus when clicking outside
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.menu-container')) {
+        openCategoryMenu.value = null
+        openExpenseMenu.value = null
+      }
+    }
+
     onMounted(() => {
       loadData()
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
     })
 
     return {
@@ -407,7 +500,16 @@ export default {
       expenseForm,
       saveCategory,
       editCategory,
+      handleDeleteCategory,
+      toggleCategoryMenu,
+      closeCategoryMenu,
       saveExpense,
+      editExpense,
+      handleDeleteExpense,
+      toggleExpenseMenu,
+      closeExpenseMenu,
+      openCategoryMenu,
+      openExpenseMenu,
       closeCategoryModal,
       closeExpenseModal,
       formatDate,
@@ -520,6 +622,22 @@ export default {
   color: #111827;
 }
 
+.rollover-badge {
+  margin-left: 0.5rem;
+  color: #667eea;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
 .empty-value {
   color: #9ca3af;
 }
@@ -550,14 +668,18 @@ export default {
 }
 
 .actions {
-  display: flex;
-  gap: 0.5rem;
+  position: relative;
 }
 
-.btn-icon {
+.menu-container {
+  position: relative;
+  display: inline-block;
+}
+
+.btn-menu {
   background: none;
   border: none;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 4px;
@@ -565,10 +687,55 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #6b7280;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
 }
 
-.btn-icon:hover {
+.btn-menu:hover {
   background: #f3f4f6;
+  color: #374151;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  min-width: 120px;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #374151;
+  transition: background 0.2s;
+}
+
+.dropdown-item:hover {
+  background: #f9fafb;
+}
+
+.dropdown-item.delete {
+  color: #ef4444;
+}
+
+.dropdown-item.delete:hover {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .expenses-list {
@@ -584,6 +751,16 @@ export default {
   padding: 1rem;
   background: #f9fafb;
   border-radius: 8px;
+}
+
+.expense-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.expense-actions .menu-container {
+  position: relative;
 }
 
 .expense-info {

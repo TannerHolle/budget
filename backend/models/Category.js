@@ -18,6 +18,10 @@ const categorySchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0
+  },
+  rollover: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true
