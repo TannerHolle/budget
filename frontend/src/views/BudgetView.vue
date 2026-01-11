@@ -49,7 +49,6 @@
 
     <!-- Budget Table -->
     <div class="card">
-      <h3>Budget vs Actual</h3>
       <table class="budget-table">
         <thead>
           <tr>
@@ -190,6 +189,14 @@
             <button type="button" @click="closeCategoryModal" class="btn btn-secondary">
               Cancel
             </button>
+            <button 
+              v-if="!editingCategory" 
+              type="button" 
+              @click="saveCategoryAndCreateAnother" 
+              class="btn btn-primary"
+            >
+              Save and Create Another
+            </button>
             <button type="submit" class="btn btn-primary">Save</button>
           </div>
         </form>
@@ -242,6 +249,14 @@
           <div class="modal-actions">
             <button type="button" @click="closeExpenseModal" class="btn btn-secondary">
               Cancel
+            </button>
+            <button 
+              v-if="!editingExpense" 
+              type="button" 
+              @click="saveExpenseAndCreateAnother" 
+              class="btn btn-primary"
+            >
+              Save and Create Another
             </button>
             <button type="submit" class="btn btn-primary">Save</button>
           </div>
@@ -419,6 +434,29 @@ export default {
       }
     }
 
+    const saveCategoryAndCreateAnother = async () => {
+      if (!selectedBudgetId.value) return
+      if (editingCategory.value) return // Only allow when creating, not editing
+      
+      // Validate form
+      if (!categoryForm.value.name) {
+        return // Let HTML5 validation handle this
+      }
+      
+      try {
+        await createCategory({ ...categoryForm.value, budgetId: selectedBudgetId.value })
+        await loadData()
+        // Reset form but keep modal open
+        categoryForm.value = {
+          name: '',
+          budget: 0,
+          rollover: false
+        }
+      } catch (error) {
+        console.error('Error saving category:', error)
+      }
+    }
+
     const editCategory = (category) => {
       editingCategory.value = category
       categoryForm.value = {
@@ -474,6 +512,35 @@ export default {
         }
         await loadData()
         closeExpenseModal()
+      } catch (error) {
+        console.error('Error saving expense:', error)
+      }
+    }
+
+    const saveExpenseAndCreateAnother = async () => {
+      if (!selectedBudgetId.value) return
+      if (editingExpense.value) return // Only allow when creating, not editing
+      
+      // Validate form
+      if (!expenseForm.value.description || !expenseForm.value.amount || !expenseForm.value.category || !expenseForm.value.date) {
+        return // Let HTML5 validation handle this
+      }
+      
+      try {
+        const data = {
+          ...expenseForm.value,
+          date: new Date(expenseForm.value.date),
+          budgetId: selectedBudgetId.value
+        }
+        await createExpense(data)
+        await loadData()
+        // Reset form but keep modal open
+        expenseForm.value = {
+          description: '',
+          amount: 0,
+          category: '',
+          date: new Date().toISOString().split('T')[0]
+        }
       } catch (error) {
         console.error('Error saving expense:', error)
       }
@@ -570,11 +637,13 @@ export default {
         categoryForm,
         expenseForm,
         saveCategory,
+        saveCategoryAndCreateAnother,
         editCategory,
         handleDeleteCategory,
         toggleCategoryMenu,
         closeCategoryMenu,
         saveExpense,
+        saveExpenseAndCreateAnother,
         editExpense,
         handleDeleteExpense,
         toggleExpenseMenu,
@@ -676,7 +745,7 @@ export default {
 
 .month-select:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #475569;
 }
 
 .summary-card {
@@ -707,7 +776,7 @@ export default {
 }
 
 .budget-table th {
-  padding: 0.875rem 1rem;
+  padding: 0.5rem 1rem;
   text-align: left;
   font-weight: 600;
   font-size: 0.875rem;
@@ -730,7 +799,7 @@ export default {
 }
 
 .budget-table td {
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   vertical-align: middle;
 }
 
@@ -741,7 +810,7 @@ export default {
 
 .rollover-badge {
   margin-left: 0.5rem;
-  color: #667eea;
+  color: #475569;
   font-size: 0.875rem;
   font-weight: 600;
 }
@@ -779,7 +848,7 @@ export default {
 }
 
 .total-row td {
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   font-weight: 700;
   font-size: 1rem;
 }
@@ -901,7 +970,7 @@ export default {
 }
 
 .expense-creator {
-  color: #667eea;
+  color: #475569;
   font-weight: 500;
 }
 

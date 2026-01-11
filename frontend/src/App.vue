@@ -76,7 +76,7 @@ export default {
 
 .logo {
   font-size: 1.25rem;
-  color: #667eea;
+  color: #1e293b;
   margin: 0;
   font-weight: 600;
 }

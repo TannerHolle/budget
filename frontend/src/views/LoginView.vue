@@ -114,7 +114,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
   padding: 2rem;
 }
 
@@ -129,7 +129,7 @@ export default {
 
 .login-container h1 {
   text-align: center;
-  color: #667eea;
+  color: #1e293b;
   margin-bottom: 2rem;
   font-size: 2rem;
 }
@@ -155,12 +155,12 @@ export default {
 }
 
 .tab-btn:hover {
-  color: #667eea;
+  color: #475569;
 }
 
 .tab-btn.active {
-  color: #667eea;
-  border-bottom-color: #667eea;
+  color: #475569;
+  border-bottom-color: #475569;
   font-weight: 600;
 }
 
