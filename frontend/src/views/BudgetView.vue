@@ -250,7 +250,8 @@ import {
   createExpense,
   updateExpense,
   deleteExpense,
-  getExpensesByCategory
+  getExpensesByCategory,
+  getExpenseMonths
 } from '../api/api'
 
 export default {
@@ -260,6 +261,7 @@ export default {
     const expenses = ref([])
     const expensesByCategory = ref([])
     const recentExpenses = ref([])
+    const expenseMonths = ref([])
     const showAddCategoryModal = ref(false)
     const showAddExpenseModal = ref(false)
     const editingCategory = ref(null)
@@ -273,13 +275,30 @@ export default {
     const months = computed(() => {
       const monthsList = []
       const currentDate = new Date()
-      for (let i = 0; i < 12; i++) {
-        const date = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1)
-        const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-        const label = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-        monthsList.push({ value, label })
-      }
-      return monthsList
+      const currentMonthValue = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
+      
+      // Create a Set of months that have expenses
+      const monthsWithExpenses = new Set(
+        expenseMonths.value.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`)
+      )
+      
+      // Always include current month
+      monthsWithExpenses.add(currentMonthValue)
+      
+      // Convert Set to array and create month objects
+      const allMonths = Array.from(monthsWithExpenses)
+        .map(value => {
+          const [year, month] = value.split('-')
+          const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+          return {
+            value,
+            label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+            date
+          }
+        })
+        .sort((a, b) => b.date - a.date) // Sort descending (newest first)
+      
+      return allMonths.map(({ value, label }) => ({ value, label }))
     })
 
     const categoryForm = ref({
@@ -324,14 +343,16 @@ export default {
     const loadData = async () => {
       try {
         const [month, year] = selectedMonth.value.split('-')
-        const [catsRes, expRes, expByCatRes] = await Promise.all([
+        const [catsRes, expRes, expByCatRes, monthsRes] = await Promise.all([
           getCategories(),
           getExpenses(),
-          getExpensesByCategory({ params: { month, year } })
+          getExpensesByCategory({ params: { month, year } }),
+          getExpenseMonths()
         ])
         categories.value = catsRes.data
         expenses.value = expRes.data
         expensesByCategory.value = expByCatRes.data
+        expenseMonths.value = monthsRes.data
         
         // Get recent expenses (last 10)
         recentExpenses.value = expRes.data.slice(0, 10)

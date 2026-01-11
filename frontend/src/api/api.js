@@ -16,6 +16,7 @@ export const deleteCategory = (id) => api.delete(`/categories/${id}`)
 // Expenses
 export const getExpenses = () => api.get('/expenses')
 export const getExpensesByCategory = (params) => api.get('/expenses/by-category', { params })
+export const getExpenseMonths = () => api.get('/expenses/months')
 export const createExpense = (data) => api.post('/expenses', data)
 export const updateExpense = (id, data) => api.put(`/expenses/${id}`, data)
 export const deleteExpense = (id) => api.delete(`/expenses/${id}`)

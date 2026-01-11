@@ -75,6 +75,35 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Get months with expenses
+router.get('/months', async (req, res) => {
+  try {
+    const months = await Expense.aggregate([
+      {
+        $group: {
+          _id: {
+            year: { $year: '$date' },
+            month: { $month: '$date' }
+          }
+        }
+      },
+      {
+        $sort: { '_id.year': -1, '_id.month': -1 }
+      },
+      {
+        $project: {
+          _id: 0,
+          year: '$_id.year',
+          month: '$_id.month'
+        }
+      }
+    ]);
+    res.json(months);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get expenses by category
 router.get('/by-category', async (req, res) => {
   try {
