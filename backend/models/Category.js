@@ -23,6 +23,10 @@ const categorySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  order: {
+    type: Number,
+    default: 0
+  },
   budgetId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Budget',

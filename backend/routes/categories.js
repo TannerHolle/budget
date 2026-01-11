@@ -29,7 +29,7 @@ router.get('/', auth, async (req, res) => {
       return res.status(403).json({ error: 'Access denied to this budget' });
     }
 
-    const categories = await Category.find({ budgetId }).sort({ name: 1 });
+    const categories = await Category.find({ budgetId }).sort({ order: 1, name: 1 });
     res.json(categories);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -96,6 +96,31 @@ router.delete('/:id', auth, async (req, res) => {
 
     await Category.findByIdAndDelete(req.params.id);
     res.json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reorder categories
+router.post('/reorder', auth, async (req, res) => {
+  try {
+    const { budgetId, categoryOrders } = req.body;
+    if (!budgetId || !categoryOrders) {
+      return res.status(400).json({ error: 'budgetId and categoryOrders are required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    // Update all categories with their new order
+    const updatePromises = categoryOrders.map(({ categoryId, order }) =>
+      Category.findByIdAndUpdate(categoryId, { order }, { new: true })
+    );
+
+    await Promise.all(updatePromises);
+    res.json({ message: 'Categories reordered successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

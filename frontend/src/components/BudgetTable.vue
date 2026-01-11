@@ -8,17 +8,25 @@
       </select>
       <span v-else class="month-display">{{ months[0]?.label || 'No months available' }}</span>
       <div class="budget-card-actions">
+        <div class="settings-container">
+          <button @click.stop="toggleSettingsMenu" class="btn-menu" title="Settings">⋯</button>
+          <div v-if="showSettingsMenu" class="settings-dropdown">
+            <button @click="handleAddCategory" class="dropdown-item">Add Category</button>
+            <button @click="handleToggleReorder" class="dropdown-item">Reorder Categories</button>
+          </div>
+        </div>
         <button @click="$emit('add-expense')" class="btn btn-primary">
           + Add Expense
         </button>
-        <button @click="$emit('add-category')" class="btn btn-secondary">
-          + Add Category
+        <button v-if="reorderMode" @click="exitReorderMode" class="btn btn-secondary btn-sm">
+          Done Reordering
         </button>
       </div>
     </div>
     <table class="budget-table">
       <thead>
         <tr>
+          <th v-if="reorderMode" style="width: 30px;"></th>
           <th>Category</th>
           <th>Amount</th>
           <th>Budget %</th>
@@ -29,11 +37,26 @@
       </thead>
       <tbody>
         <tr
-          v-for="item in budgetData"
+          v-for="(item, index) in budgetData"
           :key="item.category._id"
-          :class="{ 'over-budget': item.actual > item.budget && item.budget > 0, 'clickable-row': true }"
-          @click="$emit('show-category-expenses', item.category)"
+          :class="{ 
+            'over-budget': item.actual > item.budget && item.budget > 0, 
+            'clickable-row': !reorderMode, 
+            'dragging': draggedIndex === index,
+            'drag-over': dragOverIndex === index
+          }"
+          :draggable="reorderMode"
+          @dragstart="handleDragStart(index, $event)"
+          @dragover.prevent="handleDragOver($event)"
+          @dragenter.prevent="handleDragEnter(index, $event)"
+          @dragleave="handleDragLeave(index, $event)"
+          @drop="handleDrop(index, $event)"
+          @dragend="handleDragEnd"
+          @click="!isDragging && !reorderMode && $emit('show-category-expenses', item.category)"
         >
+          <td v-if="reorderMode" class="drag-handle" @click.stop @mousedown.stop>
+            <span class="grip-icon">⋮⋮</span>
+          </td>
           <td>
             <span class="category-name">{{ item.category.name }}</span>
             <span v-if="item.category.rollover" class="rollover-badge" title="Rollover enabled">↻</span>
@@ -69,6 +92,7 @@
           </td>
         </tr>
         <tr class="total-row">
+          <td v-if="reorderMode"></td>
           <td><strong>Total</strong></td>
           <td><strong>${{ formatCurrency(totalBudget) }}</strong></td>
           <td><strong v-if="totalBudget > 0">100.0%</strong><strong v-else>-</strong></td>
@@ -120,7 +144,12 @@ export default {
   },
   data() {
     return {
-      openMenu: null
+      openMenu: null,
+      draggedIndex: null,
+      dragOverIndex: null,
+      isDragging: false,
+      showSettingsMenu: false,
+      reorderMode: false
     }
   },
   computed: {
@@ -156,6 +185,78 @@ export default {
       if (!event.target.closest('.menu-container')) {
         this.openMenu = null
       }
+      if (!event.target.closest('.settings-container')) {
+        this.showSettingsMenu = false
+      }
+    },
+    toggleSettingsMenu() {
+      this.showSettingsMenu = !this.showSettingsMenu
+    },
+    handleAddCategory() {
+      this.showSettingsMenu = false
+      this.$emit('add-category')
+    },
+    handleToggleReorder() {
+      this.showSettingsMenu = false
+      this.reorderMode = !this.reorderMode
+      if (!this.reorderMode) {
+        // Exit reorder mode - reset drag state
+        this.draggedIndex = null
+        this.dragOverIndex = null
+        this.isDragging = false
+      }
+    },
+    exitReorderMode() {
+      this.reorderMode = false
+      this.draggedIndex = null
+      this.dragOverIndex = null
+      this.isDragging = false
+    },
+    handleDragStart(index, event) {
+      this.draggedIndex = index
+      this.isDragging = true
+      event.dataTransfer.effectAllowed = 'move'
+      event.dataTransfer.setData('text/html', event.target)
+      // Only make the row itself semi-transparent, not the entire row
+      const row = event.currentTarget
+      row.style.opacity = '0.5'
+    },
+    handleDragOver(event) {
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'move'
+    },
+    handleDragEnter(index, event) {
+      if (this.draggedIndex !== null && this.draggedIndex !== index) {
+        this.dragOverIndex = index
+      }
+    },
+    handleDragLeave(index, event) {
+      if (!event.currentTarget.contains(event.relatedTarget)) {
+        this.dragOverIndex = null
+      }
+    },
+    handleDrop(index, event) {
+      event.preventDefault()
+      if (this.draggedIndex === null || this.draggedIndex === index) {
+        return
+      }
+
+      const newBudgetData = [...this.budgetData]
+      const draggedItem = newBudgetData[this.draggedIndex]
+      newBudgetData.splice(this.draggedIndex, 1)
+      newBudgetData.splice(index, 0, draggedItem)
+
+      this.$emit('reorder-categories', newBudgetData.map((item, idx) => ({
+        categoryId: item.category._id,
+        order: idx
+      })))
+    },
+    handleDragEnd(event) {
+      const row = event.currentTarget
+      row.style.opacity = ''
+      this.draggedIndex = null
+      this.dragOverIndex = null
+      this.isDragging = false
     }
   },
   mounted() {
@@ -213,6 +314,30 @@ export default {
   font-size: 0.75rem;
 }
 
+.budget-card-actions .btn-sm {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+}
+
+.settings-container {
+  position: relative;
+  display: inline-block;
+}
+
+.settings-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.25rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 160px;
+  z-index: 10;
+  overflow: hidden;
+}
+
 .budget-table {
   width: 100%;
   border-collapse: collapse;
@@ -256,6 +381,42 @@ export default {
 
 .budget-table tbody tr.clickable-row:hover {
   background: #e5e7eb;
+}
+
+.budget-table tbody tr.dragging {
+  opacity: 0.5;
+}
+
+.budget-table tbody tr.drag-over {
+  border-top: 2px solid #475569;
+}
+
+.budget-table tbody tr[draggable="true"] {
+  cursor: move;
+}
+
+.drag-handle {
+  cursor: grab;
+  user-select: none;
+  text-align: center;
+  width: 30px;
+  padding: 0.375rem 0.25rem;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.grip-icon {
+  color: #9ca3af;
+  font-size: 0.875rem;
+  line-height: 1;
+  display: inline-block;
+  letter-spacing: -0.1em;
+}
+
+.grip-icon:hover {
+  color: #6b7280;
 }
 
 .budget-table tbody tr.over-budget {

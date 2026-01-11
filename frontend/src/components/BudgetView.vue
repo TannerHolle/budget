@@ -21,6 +21,7 @@
       @show-category-expenses="showCategoryExpenses"
       @edit-category="editCategory"
       @delete-category="handleDeleteCategory"
+      @reorder-categories="handleReorderCategories"
     />
 
     <!-- This Month's Expenses -->
@@ -79,6 +80,7 @@ import {
   createCategory,
   updateCategory,
   deleteCategory,
+  reorderCategories,
   getExpenses,
   createExpense,
   updateExpense,
@@ -171,7 +173,8 @@ export default {
           actual: expenseData ? expenseData.total : 0
         }
       })
-      return data.sort((a, b) => b.budget - a.budget)
+      // Categories are already sorted by order from the backend
+      return data
     },
     totalBudget() {
       return this.budgetData.reduce((sum, item) => sum + item.budget, 0)
@@ -265,6 +268,16 @@ export default {
     handleMonthChange() {
       this.loadData()
     },
+    async handleReorderCategories(categoryOrders) {
+      if (!this.selectedBudgetId) return
+      
+      try {
+        await reorderCategories(this.selectedBudgetId, categoryOrders)
+        await this.loadData()
+      } catch (error) {
+        console.error('Error reordering categories:', error)
+      }
+    },
     async saveCategory() {
       if (!this.selectedBudgetId) return
       
@@ -272,7 +285,15 @@ export default {
         if (this.editingCategory) {
           await updateCategory(this.editingCategory._id, this.categoryForm)
         } else {
-          await createCategory({ ...this.categoryForm, budgetId: this.selectedBudgetId })
+          // Set order to be after the last category
+          const maxOrder = this.categories.length > 0 
+            ? Math.max(...this.categories.map(c => c.order || 0))
+            : -1
+          await createCategory({ 
+            ...this.categoryForm, 
+            budgetId: this.selectedBudgetId,
+            order: maxOrder + 1
+          })
         }
         await this.loadData()
         this.closeCategoryModal()
@@ -289,7 +310,15 @@ export default {
       }
       
       try {
-        await createCategory({ ...this.categoryForm, budgetId: this.selectedBudgetId })
+        // Set order to be after the last category
+        const maxOrder = this.categories.length > 0 
+          ? Math.max(...this.categories.map(c => c.order || 0))
+          : -1
+        await createCategory({ 
+          ...this.categoryForm, 
+          budgetId: this.selectedBudgetId,
+          order: maxOrder + 1
+        })
         await this.loadData()
         this.categoryForm = {
           name: '',
