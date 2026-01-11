@@ -2,11 +2,11 @@
   <div class="grid grid-3 summary-grid">
     <div class="card summary-card">
       <h3>Total Budget</h3>
-      <p class="amount">${{ totalBudget.toFixed(2) }}</p>
+      <p class="amount">${{ formatCurrency(totalBudget) }}</p>
     </div>
     <div class="card summary-card">
       <h3>Total Actual</h3>
-      <p class="amount amount-negative">${{ totalActual.toFixed(2) }}</p>
+      <p class="amount amount-negative">${{ formatCurrency(totalActual) }}</p>
     </div>
     <div class="card summary-card">
       <h3>Remaining</h3>
@@ -14,7 +14,7 @@
         class="amount"
         :class="remaining >= 0 ? 'amount-positive' : 'amount-negative'"
       >
-        ${{ remaining.toFixed(2) }}
+        ${{ formatCurrency(remaining) }}
       </p>
     </div>
   </div>
@@ -35,6 +35,11 @@ export default {
     remaining: {
       type: Number,
       required: true
+    }
+  },
+  methods: {
+    formatCurrency(value) {
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
   }
 }

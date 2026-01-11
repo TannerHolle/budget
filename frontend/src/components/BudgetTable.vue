@@ -20,8 +20,8 @@
       <thead>
         <tr>
           <th>Category</th>
-          <th>Expected</th>
-          <th>Expected %</th>
+          <th>Amount</th>
+          <th>Budget %</th>
           <th>Actual</th>
           <th>Actual %</th>
           <th>Actions</th>
@@ -39,7 +39,7 @@
             <span v-if="item.category.rollover" class="rollover-badge" title="Rollover enabled">↻</span>
           </td>
           <td>
-            <span v-if="item.budget > 0">${{ item.budget.toFixed(2) }}</span>
+            <span v-if="item.budget > 0">${{ formatCurrency(item.budget) }}</span>
             <span v-else class="empty-value">-</span>
           </td>
           <td>
@@ -49,7 +49,7 @@
             <span v-else class="empty-value">-</span>
           </td>
           <td>
-            <span v-if="item.actual > 0" class="actual-value">${{ item.actual.toFixed(2) }}</span>
+            <span v-if="item.actual > 0" class="actual-value">${{ formatCurrency(item.actual) }}</span>
             <span v-else class="empty-value">-</span>
           </td>
           <td>
@@ -70,10 +70,10 @@
         </tr>
         <tr class="total-row">
           <td><strong>Total</strong></td>
-          <td><strong>${{ totalBudget.toFixed(2) }}</strong></td>
+          <td><strong>${{ formatCurrency(totalBudget) }}</strong></td>
           <td><strong v-if="totalBudget > 0">100.0%</strong><strong v-else>-</strong></td>
           <td>
-            <strong v-if="totalActual > 0" class="actual-value">${{ totalActual.toFixed(2) }}</strong>
+            <strong v-if="totalActual > 0" class="actual-value">${{ formatCurrency(totalActual) }}</strong>
             <strong v-else>-</strong>
           </td>
           <td>
@@ -134,6 +134,9 @@ export default {
     }
   },
   methods: {
+    formatCurrency(value) {
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    },
     toggleMenu(categoryId) {
       this.openMenu = this.openMenu === categoryId ? null : categoryId
     },

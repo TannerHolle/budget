@@ -23,7 +23,7 @@
             </div>
           </div>
           <div class="expense-actions">
-            <div class="expense-amount">${{ expense.amount.toFixed(2) }}</div>
+            <div class="expense-amount">${{ formatCurrency(expense.amount) }}</div>
             <div class="menu-container">
               <button @click.stop="toggleMenu(expense._id)" class="btn-menu" title="Menu">⋯</button>
               <div v-if="openMenu === expense._id" class="dropdown-menu">
@@ -72,6 +72,9 @@ export default {
     }
   },
   methods: {
+    formatCurrency(value) {
+      return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    },
     formatDate(date) {
       const d = new Date(date)
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
