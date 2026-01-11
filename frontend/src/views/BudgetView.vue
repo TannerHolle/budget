@@ -3,11 +3,12 @@
     <div class="header-section">
       <h2>Budget Overview</h2>
       <div class="header-actions">
-        <select v-model="selectedMonth" @change="loadData" class="month-select">
+        <select v-if="months.length > 1" v-model="selectedMonth" @change="loadData" class="month-select">
           <option v-for="month in months" :key="month.value" :value="month.value">
             {{ month.label }}
           </option>
         </select>
+        <span v-else class="month-display">{{ months[0]?.label || 'No months available' }}</span>
         <button @click="showAddExpenseModal = true" class="btn btn-primary">
           + Add Expense
         </button>
@@ -576,6 +577,16 @@ export default {
   background: white;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.month-display {
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  color: #374151;
+  display: inline-block;
 }
 
 .month-select:focus {
