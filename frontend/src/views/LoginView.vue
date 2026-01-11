@@ -48,6 +48,15 @@
             minlength="6"
           />
         </div>
+        <div v-if="isLogin" class="form-group remember-me">
+          <label class="checkbox-label">
+            <input 
+              v-model="form.rememberMe" 
+              type="checkbox"
+            />
+            <span>Remember me</span>
+          </label>
+        </div>
         <div v-if="error" class="error-message">
           {{ error }}
         </div>
@@ -76,7 +85,8 @@ export default {
     const form = ref({
       name: '',
       email: '',
-      password: ''
+      password: '',
+      rememberMe: false
     })
 
     const handleSubmit = async () => {
@@ -85,7 +95,7 @@ export default {
       
       try {
         if (isLogin.value) {
-          await login(form.value.email, form.value.password)
+          await login(form.value.email, form.value.password, form.value.rememberMe)
         } else {
           await signup(form.value.name, form.value.email, form.value.password)
         }
@@ -168,6 +178,26 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.remember-me {
+  margin-top: -0.5rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #4b5563;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+  accent-color: #475569;
 }
 
 .error-message {

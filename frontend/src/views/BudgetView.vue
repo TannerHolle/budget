@@ -463,10 +463,23 @@ export default {
     const categoryExpenses = computed(() => {
       if (!selectedCategoryForExpenses.value) return []
       
-      return thisMonthsExpenses.value.filter(expense => {
+      // Filter by selected month and category
+      const [year, month] = selectedMonth.value.split('-')
+      const monthNum = parseInt(month)
+      const yearNum = parseInt(year)
+      
+      return expenses.value.filter(expense => {
+        // Check if date is in selected month
+        const expenseDate = new Date(expense.date)
+        const expenseMonth = expenseDate.getUTCMonth() + 1
+        const expenseYear = expenseDate.getUTCFullYear()
+        
         // Check if category matches
-        return String(expense.category._id) === String(selectedCategoryForExpenses.value._id)
-      })
+        const categoryMatches = String(expense.category._id) === String(selectedCategoryForExpenses.value._id)
+        
+        // Both month and category must match
+        return expenseMonth === monthNum && expenseYear === yearNum && categoryMatches
+      }).sort((a, b) => new Date(b.date) - new Date(a.date))
     })
 
     const loadBudgets = async () => {
@@ -775,11 +788,10 @@ export default {
     }
 
     const formatDate = (date) => {
-      return new Date(date).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-      })
+      const d = new Date(date)
+      // Use UTC methods to avoid timezone conversion issues
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
     }
 
     // Close menus when clicking outside

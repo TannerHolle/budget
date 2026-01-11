@@ -47,7 +47,7 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe } = req.body;
 
     // Find user
     const user = await User.findOne({ email });
@@ -61,8 +61,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Generate token
-    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    // Generate token with longer expiration if "Remember Me" is checked
+    const expiresIn = rememberMe ? '30d' : '7d';
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn });
 
     // Get user's primary budget (first budget they own or are a member of)
     const budget = await Budget.findOne({

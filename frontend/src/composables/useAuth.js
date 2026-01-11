@@ -25,9 +25,9 @@ if (token.value && !user.value) {
 export function useAuth() {
   const isAuthenticated = computed(() => !!token.value)
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
-      const res = await loginApi({ email, password })
+      const res = await loginApi({ email, password, rememberMe })
       token.value = res.data.token
       user.value = res.data.user
       budgetId.value = res.data.budgetId
