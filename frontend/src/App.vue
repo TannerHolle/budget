@@ -94,7 +94,7 @@ export default {
 .navbar {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
-  padding: 0.5rem 0;
+  padding: 0.375rem 0;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
@@ -107,12 +107,12 @@ export default {
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 1rem;
+  padding: 0 0.75rem;
 }
 
 @media (min-width: 768px) {
   .navbar .container {
-    padding: 0 2rem;
+    padding: 0 1rem;
   }
 }
 
@@ -125,16 +125,16 @@ export default {
 .navbar-user .user-name {
   color: #374151;
   font-weight: 500;
-  font-size: 0.875rem;
-}
-
-.navbar-user .btn-sm {
-  padding: 0.375rem 0.875rem;
   font-size: 0.8125rem;
 }
 
+.navbar-user .btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+}
+
 .logo {
-  font-size: 1.125rem;
+  font-size: 1rem;
   color: #1e293b;
   margin: 0;
   font-weight: 600;

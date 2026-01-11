@@ -108,20 +108,20 @@ export default {
 .category-expenses-list {
   max-height: 60vh;
   overflow-y: auto;
-  margin-top: 1rem;
+  margin-top: 0.75rem;
 }
 
 .category-expenses-list .expense-item {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .expense-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 0.75rem;
   background: #f9fafb;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .expense-actions {
@@ -146,11 +146,12 @@ export default {
 
 .expense-description {
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.125rem;
+  font-size: 0.875rem;
 }
 
 .expense-meta {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
@@ -161,14 +162,15 @@ export default {
 
 .expense-amount {
   font-weight: 700;
-  font-size: 1.125rem;
+  font-size: 0.9375rem;
   color: #ef4444;
 }
 
 .empty-state {
   text-align: center;
   color: #6b7280;
-  padding: 2rem;
+  padding: 1.5rem;
+  font-size: 0.875rem;
 }
 
 .menu-container {
@@ -179,9 +181,9 @@ export default {
 .btn-menu {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.25rem;
   border-radius: 4px;
   transition: background 0.2s;
   display: flex;
@@ -189,8 +191,8 @@ export default {
   justify-content: center;
   color: #6b7280;
   line-height: 1;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 
 .btn-menu:hover {
@@ -205,9 +207,9 @@ export default {
   margin-top: 0.25rem;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  min-width: 120px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 100px;
   z-index: 10;
   overflow: hidden;
 }
@@ -215,12 +217,12 @@ export default {
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   text-align: left;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: #374151;
   transition: background 0.2s;
 }

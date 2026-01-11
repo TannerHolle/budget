@@ -98,8 +98,8 @@ export default {
 
 .modal-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 </style>

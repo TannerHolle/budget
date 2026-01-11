@@ -243,10 +243,10 @@ export default {
 
 .select-input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 0.5rem;
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
   transition: border-color 0.2s;
   cursor: pointer;
 }
@@ -264,18 +264,18 @@ export default {
   margin-top: 0.25rem;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  max-height: 200px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  max-height: 180px;
   overflow-y: auto;
   z-index: 1000;
 }
 
 .select-option {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
-  font-size: 1rem;
+  font-size: 0.875rem;
   color: #374151;
 }
 
@@ -304,8 +304,8 @@ export default {
 
 .modal-actions {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   justify-content: flex-end;
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 </style>

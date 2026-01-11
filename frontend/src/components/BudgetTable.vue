@@ -166,20 +166,20 @@ export default {
 
 <style scoped>
 .month-select {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.625rem;
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .month-display {
-  padding: 0.5rem 0.75rem;
+  padding: 0.375rem 0.625rem;
   border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
   background: white;
   color: #374151;
   display: inline-block;
@@ -194,20 +194,20 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
-  gap: 1rem;
+  margin-bottom: 0.75rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .budget-card-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 
 .budget-card-actions .btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
 }
 
 .budget-table {
@@ -221,10 +221,10 @@ export default {
 }
 
 .budget-table th {
-  padding: 0.375rem 1rem;
+  padding: 0.5rem 0.75rem;
   text-align: left;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -264,30 +264,32 @@ export default {
 }
 
 .budget-table td {
-  padding: 0.375rem 1rem;
+  padding: 0.5rem 0.75rem;
   vertical-align: middle;
+  font-size: 0.875rem;
 }
 
 .category-name {
   font-weight: 600;
   color: #111827;
+  font-size: 0.875rem;
 }
 
 .rollover-badge {
-  margin-left: 0.5rem;
+  margin-left: 0.375rem;
   color: #475569;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 
 .rollover-legend {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 1rem;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
   border-top: 1px solid #e5e7eb;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
@@ -307,9 +309,10 @@ export default {
 .actual-value {
   background: #dcfce7;
   color: #059669;
-  padding: 0.25rem 0.5rem;
+  padding: 0.125rem 0.375rem;
   border-radius: 4px;
   font-weight: 600;
+  font-size: 0.8125rem;
   display: inline-block;
 }
 
@@ -324,9 +327,9 @@ export default {
 }
 
 .total-row td {
-  padding: 0.375rem 1rem;
+  padding: 0.5rem 0.75rem;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.875rem;
 }
 
 .actions {
@@ -341,9 +344,9 @@ export default {
 .btn-menu {
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
-  padding: 0.5rem;
+  padding: 0.25rem;
   border-radius: 4px;
   transition: background 0.2s;
   display: flex;
@@ -351,8 +354,8 @@ export default {
   justify-content: center;
   color: #6b7280;
   line-height: 1;
-  width: 32px;
-  height: 32px;
+  width: 24px;
+  height: 24px;
 }
 
 .btn-menu:hover {
@@ -367,9 +370,9 @@ export default {
   margin-top: 0.25rem;
   background: white;
   border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  min-width: 120px;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  min-width: 100px;
   z-index: 10;
   overflow: hidden;
 }
@@ -377,12 +380,12 @@ export default {
 .dropdown-item {
   display: block;
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   text-align: left;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: #374151;
   transition: background 0.2s;
 }

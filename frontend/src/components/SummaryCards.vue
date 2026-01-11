@@ -43,11 +43,11 @@ export default {
 <style scoped>
 .summary-card {
   text-align: center;
-  padding: 1rem;
+  padding: 0.75rem;
 }
 
 .summary-card h3 {
-  font-size: 0.75rem;
+  font-size: 0.625rem;
   color: #6b7280;
   margin-bottom: 0.25rem;
   text-transform: uppercase;
@@ -55,13 +55,13 @@ export default {
 }
 
 .summary-card .amount {
-  font-size: 1.5rem;
+  font-size: 1.125rem;
   font-weight: 700;
 }
 
 .summary-grid {
-  gap: 0.75rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 @media (max-width: 768px) {
