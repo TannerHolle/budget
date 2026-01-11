@@ -22,6 +22,11 @@ const categorySchema = new mongoose.Schema({
   rollover: {
     type: Boolean,
     default: false
+  },
+  budgetId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Budget',
+    required: true
   }
 }, {
   timestamps: true

@@ -1,7 +1,15 @@
 <template>
   <div class="budget-view">
     <div class="header-section">
-      <h2>Budget Overview</h2>
+      <div class="header-left">
+        <h2>Budget Overview</h2>
+        <select v-if="budgets.length > 1" v-model="selectedBudgetId" @change="onBudgetChange" class="budget-select">
+          <option v-for="budget in budgets" :key="budget._id" :value="budget._id">
+            {{ budget.name }}
+          </option>
+        </select>
+        <span v-else-if="budgets.length === 1" class="budget-display">{{ budgets[0]?.name }}</span>
+      </div>
       <div class="header-actions">
         <select v-if="months.length > 1" v-model="selectedMonth" @change="loadData" class="month-select">
           <option v-for="month in months" :key="month.value" :value="month.value">
@@ -128,6 +136,9 @@
               <p class="expense-description">{{ expense.description }}</p>
               <p class="expense-meta">
                 {{ expense.category.name }} • {{ formatDate(expense.date) }}
+                <span v-if="expense.createdBy" class="expense-creator">
+                  • by {{ expense.createdBy.name }}
+                </span>
               </p>
             </div>
           </div>
@@ -242,7 +253,9 @@
 
 <script>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useAuth } from '../composables/useAuth'
 import {
+  getBudgets,
   getCategories,
   createCategory,
   updateCategory,
@@ -258,6 +271,9 @@ import {
 export default {
   name: 'BudgetView',
   setup() {
+    const { budgetId, setBudgetId } = useAuth()
+    const budgets = ref([])
+    const selectedBudgetId = ref(budgetId.value || null)
     const categories = ref([])
     const expenses = ref([])
     const expensesByCategory = ref([])
@@ -341,14 +357,39 @@ export default {
       return totalBudget.value - totalActual.value
     })
 
+    const loadBudgets = async () => {
+      try {
+        const res = await getBudgets()
+        budgets.value = res.data
+        if (budgets.value.length > 0) {
+          // Use existing selectedBudgetId if valid, otherwise use first budget
+          const existingBudget = budgets.value.find(b => b._id === selectedBudgetId.value)
+          if (!existingBudget) {
+            selectedBudgetId.value = budgets.value[0]._id
+            setBudgetId(budgets.value[0]._id)
+          }
+          await loadData()
+        }
+      } catch (error) {
+        console.error('Error loading budgets:', error)
+      }
+    }
+
+    const onBudgetChange = () => {
+      setBudgetId(selectedBudgetId.value)
+      loadData()
+    }
+
     const loadData = async () => {
+      if (!selectedBudgetId.value) return
+      
       try {
         const [month, year] = selectedMonth.value.split('-')
         const [catsRes, expRes, expByCatRes, monthsRes] = await Promise.all([
-          getCategories(),
-          getExpenses(),
-          getExpensesByCategory({ params: { month, year } }),
-          getExpenseMonths()
+          getCategories(selectedBudgetId.value),
+          getExpenses(selectedBudgetId.value),
+          getExpensesByCategory({ month, year, budgetId: selectedBudgetId.value }),
+          getExpenseMonths(selectedBudgetId.value)
         ])
         categories.value = catsRes.data
         expenses.value = expRes.data
@@ -363,11 +404,13 @@ export default {
     }
 
     const saveCategory = async () => {
+      if (!selectedBudgetId.value) return
+      
       try {
         if (editingCategory.value) {
           await updateCategory(editingCategory.value._id, categoryForm.value)
         } else {
-          await createCategory(categoryForm.value)
+          await createCategory({ ...categoryForm.value, budgetId: selectedBudgetId.value })
         }
         await loadData()
         closeCategoryModal()
@@ -416,10 +459,13 @@ export default {
     }
 
     const saveExpense = async () => {
+      if (!selectedBudgetId.value) return
+      
       try {
         const data = {
           ...expenseForm.value,
-          date: new Date(expenseForm.value.date)
+          date: new Date(expenseForm.value.date),
+          budgetId: selectedBudgetId.value
         }
         if (editingExpense.value) {
           await updateExpense(editingExpense.value._id, data)
@@ -432,6 +478,7 @@ export default {
         console.error('Error saving expense:', error)
       }
     }
+
 
     const handleDeleteCategory = async (category) => {
       if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all expenses in this category.`)) {
@@ -495,7 +542,7 @@ export default {
     }
 
     onMounted(() => {
-      loadData()
+      loadBudgets()
       document.addEventListener('click', handleClickOutside)
     })
 
@@ -503,40 +550,44 @@ export default {
       document.removeEventListener('click', handleClickOutside)
     })
 
-    return {
-      categories,
-      expenses,
-      expensesByCategory,
-      recentExpenses,
-      budgetData,
-      totalBudget,
-      totalActual,
-      remaining,
-      selectedMonth,
-      months,
-      showAddCategoryModal,
-      showAddExpenseModal,
-      editingCategory,
-      editingExpense,
-      categoryForm,
-      expenseForm,
-      saveCategory,
-      editCategory,
-      handleDeleteCategory,
-      toggleCategoryMenu,
-      closeCategoryMenu,
-      saveExpense,
-      editExpense,
-      handleDeleteExpense,
-      toggleExpenseMenu,
-      closeExpenseMenu,
-      openCategoryMenu,
-      openExpenseMenu,
-      closeCategoryModal,
-      closeExpenseModal,
-      formatDate,
-      loadData
-    }
+      return {
+        budgets,
+        selectedBudgetId,
+        categories,
+        expenses,
+        expensesByCategory,
+        recentExpenses,
+        budgetData,
+        totalBudget,
+        totalActual,
+        remaining,
+        selectedMonth,
+        months,
+        showAddCategoryModal,
+        showAddExpenseModal,
+        editingCategory,
+        editingExpense,
+        categoryForm,
+        expenseForm,
+        saveCategory,
+        editCategory,
+        handleDeleteCategory,
+        toggleCategoryMenu,
+        closeCategoryMenu,
+        saveExpense,
+        editExpense,
+        handleDeleteExpense,
+        toggleExpenseMenu,
+        closeExpenseMenu,
+        openCategoryMenu,
+        openExpenseMenu,
+        closeCategoryModal,
+        closeExpenseModal,
+        formatDate,
+        loadData,
+        loadBudgets,
+        onBudgetChange
+      }
   }
 }
 </script>
@@ -556,10 +607,44 @@ export default {
   gap: 1rem;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
 .header-section h2 {
   color: white;
   font-size: 2rem;
   font-weight: 700;
+  margin: 0;
+}
+
+.budget-select,
+.budget-display {
+  padding: 0.5rem 0.75rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.budget-select {
+  cursor: pointer;
+}
+
+.budget-select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.budget-display {
+  cursor: default;
 }
 
 .header-actions {
@@ -813,6 +898,11 @@ export default {
 .expense-meta {
   font-size: 0.875rem;
   color: #6b7280;
+}
+
+.expense-creator {
+  color: #667eea;
+  font-weight: 500;
 }
 
 .expense-amount {

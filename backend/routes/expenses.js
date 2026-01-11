@@ -1,12 +1,38 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
+const Budget = require('../models/Budget');
+const { auth } = require('../middleware/auth');
+
+// Helper to verify budget access
+const verifyBudgetAccess = async (userId, budgetId) => {
+  const budget = await Budget.findOne({
+    _id: budgetId,
+    $or: [
+      { owner: userId },
+      { 'members.user': userId }
+    ]
+  });
+  return !!budget;
+};
 
 // Get all expenses
-router.get('/', async (req, res) => {
+router.get('/', auth, async (req, res) => {
   try {
-    const expenses = await Expense.find()
+    const { budgetId } = req.query;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const expenses = await Expense.find({ budgetId })
       .populate('category')
+      .populate('createdBy', 'name email')
       .sort({ date: -1 });
     res.json(expenses);
   } catch (error) {
@@ -15,10 +41,19 @@ router.get('/', async (req, res) => {
 });
 
 // Get expenses by date range
-router.get('/range', async (req, res) => {
+router.get('/range', auth, async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const query = {};
+    const { startDate, endDate, budgetId } = req.query;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const query = { budgetId };
     if (startDate || endDate) {
       query.date = {};
       if (startDate) query.date.$gte = new Date(startDate);
@@ -26,6 +61,7 @@ router.get('/range', async (req, res) => {
     }
     const expenses = await Expense.find(query)
       .populate('category')
+      .populate('createdBy', 'name email')
       .sort({ date: -1 });
     res.json(expenses);
   } catch (error) {
@@ -34,11 +70,26 @@ router.get('/range', async (req, res) => {
 });
 
 // Create an expense
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    const expense = new Expense(req.body);
+    const { budgetId } = req.body;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const expense = new Expense({
+      ...req.body,
+      budgetId,
+      createdBy: req.user._id
+    });
     await expense.save();
     await expense.populate('category');
+    await expense.populate('createdBy', 'name email');
     res.status(201).json(expense);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -46,29 +97,45 @@ router.post('/', async (req, res) => {
 });
 
 // Update an expense
-router.put('/:id', async (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
-    const expense = await Expense.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    ).populate('category');
+    const expense = await Expense.findById(req.params.id);
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
-    res.json(expense);
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, expense.budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const updated = await Expense.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    )
+      .populate('category')
+      .populate('createdBy', 'name email');
+    res.json(updated);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
 // Delete an expense
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const expense = await Expense.findByIdAndDelete(req.params.id);
+    const expense = await Expense.findById(req.params.id);
     if (!expense) {
       return res.status(404).json({ error: 'Expense not found' });
     }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, expense.budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    await Expense.findByIdAndDelete(req.params.id);
     res.json({ message: 'Expense deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -76,9 +143,20 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Get months with expenses
-router.get('/months', async (req, res) => {
+router.get('/months', auth, async (req, res) => {
   try {
+    const { budgetId } = req.query;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
     const months = await Expense.aggregate([
+      { $match: { budgetId: new mongoose.Types.ObjectId(budgetId) } },
       {
         $group: {
           _id: {
@@ -105,10 +183,19 @@ router.get('/months', async (req, res) => {
 });
 
 // Get expenses by category
-router.get('/by-category', async (req, res) => {
+router.get('/by-category', auth, async (req, res) => {
   try {
-    const { month, year } = req.query;
-    const query = {};
+    const { month, year, budgetId } = req.query;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const query = { budgetId: new mongoose.Types.ObjectId(budgetId) };
     
     // Filter by month/year if provided
     if (month && year) {
@@ -128,7 +215,7 @@ router.get('/by-category', async (req, res) => {
     }
     
     const expenses = await Expense.aggregate([
-      ...(Object.keys(query).length > 0 ? [{ $match: query }] : []),
+      { $match: query },
       {
         $group: {
           _id: '$category',

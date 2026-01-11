@@ -20,6 +20,16 @@ const expenseSchema = new mongoose.Schema({
     type: Date,
     required: true,
     default: Date.now
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  budgetId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Budget',
+    required: true
   }
 }, {
   timestamps: true

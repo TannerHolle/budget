@@ -15,6 +15,8 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/budgets', require('./routes/budgets'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/expenses', require('./routes/expenses'));
 
