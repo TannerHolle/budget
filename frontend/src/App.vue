@@ -1,9 +1,9 @@
 <template>
   <div id="app">
-    <nav class="navbar">
+    <nav v-if="isAuthenticated" class="navbar">
       <div class="container">
         <h1 class="logo">Budget Tracker</h1>
-        <div v-if="isAuthenticated" class="navbar-user">
+        <div class="navbar-user">
           <span class="user-name">{{ user?.name }}</span>
           <button @click="handleLogout" class="btn btn-secondary btn-sm">Logout</button>
         </div>
@@ -11,31 +11,80 @@
     </nav>
     <main>
       <div class="container">
-        <router-view />
+        <LoginView v-if="!isAuthenticated" @login="handleLogin" />
+        <BudgetView v-else />
       </div>
     </main>
   </div>
 </template>
 
 <script>
-import { useRouter } from 'vue-router'
-import { useAuth } from './composables/useAuth'
+import LoginView from './components/LoginView.vue'
+import BudgetView from './components/BudgetView.vue'
 
 export default {
   name: 'App',
-  setup() {
-    const router = useRouter()
-    const { user, isAuthenticated, logout } = useAuth()
-
-    const handleLogout = () => {
-      logout()
-      router.push('/login')
-    }
-
+  components: {
+    LoginView,
+    BudgetView
+  },
+  data() {
     return {
-      user,
-      isAuthenticated,
-      handleLogout
+      user: null
+    }
+  },
+  computed: {
+    isAuthenticated() {
+      return !!localStorage.getItem('token')
+    }
+  },
+  mounted() {
+    // Load user from localStorage
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      try {
+        this.user = JSON.parse(userStr)
+      } catch (e) {
+        this.user = null
+      }
+    }
+    
+    // Try to get current user if token exists but user doesn't
+    if (localStorage.getItem('token') && !this.user) {
+      this.loadCurrentUser()
+    }
+  },
+  methods: {
+    handleLogin() {
+      // Reload user after login
+      const userStr = localStorage.getItem('user')
+      if (userStr) {
+        try {
+          this.user = JSON.parse(userStr)
+        } catch (e) {
+          this.user = null
+        }
+      }
+    },
+    handleLogout() {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      localStorage.removeItem('budgetId')
+      this.user = null
+    },
+    async loadCurrentUser() {
+      try {
+        const { getCurrentUser } = await import('./api/api')
+        const res = await getCurrentUser()
+        this.user = res.data
+        localStorage.setItem('user', JSON.stringify(res.data))
+      } catch (error) {
+        // If token is invalid, clear everything
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        localStorage.removeItem('budgetId')
+        this.user = null
+      }
     }
   }
 }

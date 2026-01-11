@@ -69,50 +69,56 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuth } from '../composables/useAuth'
+import { login as loginApi, register } from '../api/api'
 
 export default {
   name: 'LoginView',
-  setup() {
-    const router = useRouter()
-    const { login, signup } = useAuth()
-    const isLogin = ref(true)
-    const loading = ref(false)
-    const error = ref('')
-    
-    const form = ref({
-      name: '',
-      email: '',
-      password: '',
-      rememberMe: false
-    })
-
-    const handleSubmit = async () => {
-      loading.value = true
-      error.value = ''
-      
-      try {
-        if (isLogin.value) {
-          await login(form.value.email, form.value.password, form.value.rememberMe)
-        } else {
-          await signup(form.value.name, form.value.email, form.value.password)
-        }
-        router.push('/')
-      } catch (err) {
-        error.value = err.response?.data?.error || 'An error occurred'
-      } finally {
-        loading.value = false
+  data() {
+    return {
+      isLogin: true,
+      loading: false,
+      error: '',
+      form: {
+        name: '',
+        email: '',
+        password: '',
+        rememberMe: false
       }
     }
-
-    return {
-      isLogin,
-      form,
-      loading,
-      error,
-      handleSubmit
+  },
+  methods: {
+    async handleSubmit() {
+      this.loading = true
+      this.error = ''
+      
+      try {
+        let res
+        if (this.isLogin) {
+          res = await loginApi({
+            email: this.form.email,
+            password: this.form.password,
+            rememberMe: this.form.rememberMe
+          })
+        } else {
+          res = await register({
+            name: this.form.name,
+            email: this.form.email,
+            password: this.form.password
+          })
+        }
+        
+        // Store auth data in localStorage
+        localStorage.setItem('token', res.data.token)
+        localStorage.setItem('user', JSON.stringify(res.data.user))
+        localStorage.setItem('budgetId', res.data.budgetId || '')
+        
+        // Emit login event to parent
+        this.$emit('login')
+      } catch (err) {
+        this.error = err.response?.data?.error || 'An error occurred'
+      } finally {
+        this.loading = false
+      }
     }
   }
 }

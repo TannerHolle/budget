@@ -323,8 +323,6 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { useAuth } from '../composables/useAuth'
 import {
   getBudgets,
   getBudget,
@@ -342,39 +340,51 @@ import {
 
 export default {
   name: 'BudgetView',
-  setup() {
-    const { budgetId, setBudgetId } = useAuth()
-    const budgets = ref([])
-    const selectedBudgetId = ref(budgetId.value || null)
-    const categories = ref([])
-    const expenses = ref([])
-    const expensesByCategory = ref([])
-    const expenseMonths = ref([])
-    const showAddCategoryModal = ref(false)
-    const showAddExpenseModal = ref(false)
-    const editingCategory = ref(null)
-    const editingExpense = ref(null)
-    const openCategoryMenu = ref(null)
-    const openExpenseMenu = ref(null)
-    const categorySearch = ref('')
-    const showCategoryDropdown = ref(false)
-    const selectedCategoryName = ref('')
-    const highlightedCategoryIndex = ref(-1)
-    const hasMultipleUsers = ref(false)
-    const showCategoryExpensesModal = ref(false)
-    const selectedCategoryForExpenses = ref(null)
-
+  data() {
     const now = new Date()
-    const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+    return {
+      budgets: [],
+      selectedBudgetId: localStorage.getItem('budgetId') || null,
+      categories: [],
+      expenses: [],
+      expensesByCategory: [],
+      expenseMonths: [],
+      showAddCategoryModal: false,
+      showAddExpenseModal: false,
+      editingCategory: null,
+      editingExpense: null,
+      openCategoryMenu: null,
+      openExpenseMenu: null,
+      categorySearch: '',
+      showCategoryDropdown: false,
+      selectedCategoryName: '',
+      highlightedCategoryIndex: -1,
+      hasMultipleUsers: false,
+      showCategoryExpensesModal: false,
+      selectedCategoryForExpenses: null,
+      selectedMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      categoryForm: {
+        name: '',
+        budget: 0,
+        rollover: false
+      },
+      expenseForm: {
+        description: '',
+        amount: 0,
+        category: '',
+        date: new Date().toISOString().split('T')[0]
+      }
+    }
+  },
 
-    const months = computed(() => {
-      const monthsList = []
+  computed: {
+    months() {
       const currentDate = new Date()
       const currentMonthValue = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`
       
       // Create a Set of months that have expenses
       const monthsWithExpenses = new Set(
-        expenseMonths.value.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`)
+        this.expenseMonths.map(m => `${m.year}-${String(m.month).padStart(2, '0')}`)
       )
       
       // Always include current month
@@ -394,24 +404,10 @@ export default {
         .sort((a, b) => b.date - a.date) // Sort descending (newest first)
       
       return allMonths.map(({ value, label }) => ({ value, label }))
-    })
-
-    const categoryForm = ref({
-      name: '',
-      budget: 0,
-      rollover: false
-    })
-
-    const expenseForm = ref({
-      description: '',
-      amount: 0,
-      category: '',
-      date: new Date().toISOString().split('T')[0]
-    })
-
-    const budgetData = computed(() => {
-      const data = categories.value.map(category => {
-        const expenseData = expensesByCategory.value.find(
+    },
+    budgetData() {
+      const data = this.categories.map(category => {
+        const expenseData = this.expensesByCategory.find(
           exp => String(exp.category._id) === String(category._id)
         )
         return {
@@ -421,36 +417,31 @@ export default {
         }
       })
       return data.sort((a, b) => b.budget - a.budget)
-    })
-
-    const totalBudget = computed(() => {
-      return budgetData.value.reduce((sum, item) => sum + item.budget, 0)
-    })
-
-    const totalActual = computed(() => {
-      return budgetData.value.reduce((sum, item) => sum + item.actual, 0)
-    })
-
-    const remaining = computed(() => {
-      return totalBudget.value - totalActual.value
-    })
-
-    const filteredCategories = computed(() => {
-      if (!categorySearch.value) {
-        return categories.value
+    },
+    totalBudget() {
+      return this.budgetData.reduce((sum, item) => sum + item.budget, 0)
+    },
+    totalActual() {
+      return this.budgetData.reduce((sum, item) => sum + item.actual, 0)
+    },
+    remaining() {
+      return this.totalBudget - this.totalActual
+    },
+    filteredCategories() {
+      if (!this.categorySearch) {
+        return this.categories
       }
-      const search = categorySearch.value.toLowerCase()
-      return categories.value.filter(cat => 
+      const search = this.categorySearch.toLowerCase()
+      return this.categories.filter(cat => 
         cat.name.toLowerCase().includes(search)
       )
-    })
-
-    const thisMonthsExpenses = computed(() => {
-      const [year, month] = selectedMonth.value.split('-')
+    },
+    thisMonthsExpenses() {
+      const [year, month] = this.selectedMonth.split('-')
       const monthNum = parseInt(month)
       const yearNum = parseInt(year)
       
-      return expenses.value.filter(expense => {
+      return this.expenses.filter(expense => {
         // Check if date is in selected month
         const expenseDate = new Date(expense.date)
         const expenseMonth = expenseDate.getUTCMonth() + 1
@@ -458,61 +449,61 @@ export default {
         
         return expenseMonth === monthNum && expenseYear === yearNum
       }).sort((a, b) => new Date(b.date) - new Date(a.date))
-    })
-
-    const categoryExpenses = computed(() => {
-      if (!selectedCategoryForExpenses.value) return []
+    },
+    categoryExpenses() {
+      if (!this.selectedCategoryForExpenses) return []
       
       // Filter by selected month and category
-      const [year, month] = selectedMonth.value.split('-')
+      const [year, month] = this.selectedMonth.split('-')
       const monthNum = parseInt(month)
       const yearNum = parseInt(year)
       
-      return expenses.value.filter(expense => {
+      return this.expenses.filter(expense => {
         // Check if date is in selected month
         const expenseDate = new Date(expense.date)
         const expenseMonth = expenseDate.getUTCMonth() + 1
         const expenseYear = expenseDate.getUTCFullYear()
         
         // Check if category matches
-        const categoryMatches = String(expense.category._id) === String(selectedCategoryForExpenses.value._id)
+        const categoryMatches = String(expense.category._id) === String(this.selectedCategoryForExpenses._id)
         
         // Both month and category must match
         return expenseMonth === monthNum && expenseYear === yearNum && categoryMatches
       }).sort((a, b) => new Date(b.date) - new Date(a.date))
-    })
+    }
+  },
 
-    const loadBudgets = async () => {
+  methods: {
+    async loadBudgets() {
       try {
         const res = await getBudgets()
-        budgets.value = res.data
-        if (budgets.value.length > 0) {
+        this.budgets = res.data
+        if (this.budgets.length > 0) {
           // User only has one budget, use it automatically
-          selectedBudgetId.value = budgets.value[0]._id
-          setBudgetId(budgets.value[0]._id)
-          await loadData()
+          this.selectedBudgetId = this.budgets[0]._id
+          localStorage.setItem('budgetId', this.budgets[0]._id)
+          await this.loadData()
         }
       } catch (error) {
         console.error('Error loading budgets:', error)
       }
-    }
-
-    const loadData = async () => {
-      if (!selectedBudgetId.value) return
+    },
+    async loadData() {
+      if (!this.selectedBudgetId) return
       
       try {
-        const [year, month] = selectedMonth.value.split('-')
+        const [year, month] = this.selectedMonth.split('-')
         const [catsRes, expRes, expByCatRes, monthsRes, budgetRes] = await Promise.all([
-          getCategories(selectedBudgetId.value),
-          getExpenses(selectedBudgetId.value),
-          getExpensesByCategory({ month, year, budgetId: selectedBudgetId.value }),
-          getExpenseMonths(selectedBudgetId.value),
-          getBudget(selectedBudgetId.value)
+          getCategories(this.selectedBudgetId),
+          getExpenses(this.selectedBudgetId),
+          getExpensesByCategory({ month, year, budgetId: this.selectedBudgetId }),
+          getExpenseMonths(this.selectedBudgetId),
+          getBudget(this.selectedBudgetId)
         ])
-        categories.value = catsRes.data
-        expenses.value = expRes.data
-        expensesByCategory.value = expByCatRes.data
-        expenseMonths.value = monthsRes.data
+        this.categories = catsRes.data
+        this.expenses = expRes.data
+        this.expensesByCategory = expByCatRes.data
+        this.expenseMonths = monthsRes.data
         
         // Calculate total unique users (owner + members)
         const budget = budgetRes.data
@@ -527,42 +518,41 @@ export default {
             }
           })
         }
-        hasMultipleUsers.value = uniqueUserIds.size > 1
+        this.hasMultipleUsers = uniqueUserIds.size > 1
       } catch (error) {
         console.error('Error loading data:', error)
       }
-    }
+    },
 
-    const saveCategory = async () => {
-      if (!selectedBudgetId.value) return
+    async saveCategory() {
+      if (!this.selectedBudgetId) return
       
       try {
-        if (editingCategory.value) {
-          await updateCategory(editingCategory.value._id, categoryForm.value)
+        if (this.editingCategory) {
+          await updateCategory(this.editingCategory._id, this.categoryForm)
         } else {
-          await createCategory({ ...categoryForm.value, budgetId: selectedBudgetId.value })
+          await createCategory({ ...this.categoryForm, budgetId: this.selectedBudgetId })
         }
-        await loadData()
-        closeCategoryModal()
+        await this.loadData()
+        this.closeCategoryModal()
       } catch (error) {
         console.error('Error saving category:', error)
       }
-    }
-
-    const saveCategoryAndCreateAnother = async () => {
-      if (!selectedBudgetId.value) return
-      if (editingCategory.value) return // Only allow when creating, not editing
+    },
+    async saveCategoryAndCreateAnother() {
+      if (!this.selectedBudgetId) return
+      if (this.editingCategory) return // Only allow when creating, not editing
       
       // Validate form
-      if (!categoryForm.value.name) {
+      if (!this.categoryForm.name) {
         return // Let HTML5 validation handle this
       }
       
       try {
-        await createCategory({ ...categoryForm.value, budgetId: selectedBudgetId.value })
-        await loadData()
+        await createCategory({ ...this.categoryForm, budgetId: this.selectedBudgetId })
+        await this.loadData()
         // Reset form but keep modal open
-        categoryForm.value = {
+        this.categoryForm = {
           name: '',
           budget: 0,
           rollover: false
@@ -570,39 +560,34 @@ export default {
       } catch (error) {
         console.error('Error saving category:', error)
       }
-    }
-
-    const editCategory = (category) => {
-      editingCategory.value = category
-      categoryForm.value = {
+    },
+    editCategory(category) {
+      this.editingCategory = category
+      this.categoryForm = {
         name: category.name,
         budget: category.budget || 0,
         rollover: category.rollover || false
       }
-      showAddCategoryModal.value = true
-    }
-
-    const selectCategory = (categoryId, categoryName) => {
-      expenseForm.value.category = categoryId
-      selectedCategoryName.value = categoryName
-      categorySearch.value = ''
-      showCategoryDropdown.value = false
-      highlightedCategoryIndex.value = -1
-    }
-
-    const showCategoryExpenses = (category) => {
-      selectedCategoryForExpenses.value = category
-      showCategoryExpensesModal.value = true
-    }
-
-    const closeCategoryExpensesModal = () => {
-      showCategoryExpensesModal.value = false
-      selectedCategoryForExpenses.value = null
-      openExpenseMenu.value = null
-    }
-
-    const handleCategoryKeydown = (event) => {
-      if (!showCategoryDropdown.value || filteredCategories.value.length === 0) {
+      this.showAddCategoryModal = true
+    },
+    selectCategory(categoryId, categoryName) {
+      this.expenseForm.category = categoryId
+      this.selectedCategoryName = categoryName
+      this.categorySearch = ''
+      this.showCategoryDropdown = false
+      this.highlightedCategoryIndex = -1
+    },
+    showCategoryExpenses(category) {
+      this.selectedCategoryForExpenses = category
+      this.showCategoryExpensesModal = true
+    },
+    closeCategoryExpensesModal() {
+      this.showCategoryExpensesModal = false
+      this.selectedCategoryForExpenses = null
+      this.openExpenseMenu = null
+    },
+    handleCategoryKeydown(event) {
+      if (!this.showCategoryDropdown || this.filteredCategories.length === 0) {
         if (event.key === 'Enter') {
           event.preventDefault()
         }
@@ -611,24 +596,24 @@ export default {
 
       if (event.key === 'ArrowDown') {
         event.preventDefault()
-        highlightedCategoryIndex.value = Math.min(
-          highlightedCategoryIndex.value + 1,
-          filteredCategories.value.length - 1
+        this.highlightedCategoryIndex = Math.min(
+          this.highlightedCategoryIndex + 1,
+          this.filteredCategories.length - 1
         )
         // Scroll highlighted item into view
-        nextTick(() => {
-          const element = document.getElementById(`category-option-${highlightedCategoryIndex.value}`)
+        this.$nextTick(() => {
+          const element = document.getElementById(`category-option-${this.highlightedCategoryIndex}`)
           if (element) {
             element.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
           }
         })
       } else if (event.key === 'ArrowUp') {
         event.preventDefault()
-        highlightedCategoryIndex.value = Math.max(highlightedCategoryIndex.value - 1, -1)
+        this.highlightedCategoryIndex = Math.max(this.highlightedCategoryIndex - 1, -1)
         // Scroll highlighted item into view
-        if (highlightedCategoryIndex.value >= 0) {
-          nextTick(() => {
-            const element = document.getElementById(`category-option-${highlightedCategoryIndex.value}`)
+        if (this.highlightedCategoryIndex >= 0) {
+          this.$nextTick(() => {
+            const element = document.getElementById(`category-option-${this.highlightedCategoryIndex}`)
             if (element) {
               element.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
             }
@@ -636,236 +621,167 @@ export default {
         }
       } else if (event.key === 'Enter') {
         event.preventDefault()
-        if (highlightedCategoryIndex.value >= 0 && highlightedCategoryIndex.value < filteredCategories.value.length) {
-          const cat = filteredCategories.value[highlightedCategoryIndex.value]
-          selectCategory(cat._id, cat.name)
-        } else if (filteredCategories.value.length === 1) {
+        if (this.highlightedCategoryIndex >= 0 && this.highlightedCategoryIndex < this.filteredCategories.length) {
+          const cat = this.filteredCategories[this.highlightedCategoryIndex]
+          this.selectCategory(cat._id, cat.name)
+        } else if (this.filteredCategories.length === 1) {
           // If only one category, select it
-          const cat = filteredCategories.value[0]
-          selectCategory(cat._id, cat.name)
+          const cat = this.filteredCategories[0]
+          this.selectCategory(cat._id, cat.name)
         }
       } else if (event.key === 'Escape') {
         event.preventDefault()
-        showCategoryDropdown.value = false
-        highlightedCategoryIndex.value = -1
+        this.showCategoryDropdown = false
+        this.highlightedCategoryIndex = -1
       }
-    }
+    },
 
-    const editExpense = (expense) => {
-      editingExpense.value = expense
-      expenseForm.value = {
+    editExpense(expense) {
+      this.editingExpense = expense
+      this.expenseForm = {
         description: expense.description,
         amount: expense.amount,
         category: expense.category._id,
         date: new Date(expense.date).toISOString().split('T')[0]
       }
-      selectedCategoryName.value = expense.category.name
-      categorySearch.value = ''
-      showCategoryDropdown.value = false
-      showAddExpenseModal.value = true
-    }
-
-    const toggleCategoryMenu = (categoryId) => {
-      openCategoryMenu.value = openCategoryMenu.value === categoryId ? null : categoryId
-      openExpenseMenu.value = null
-    }
-
-    const toggleExpenseMenu = (expenseId) => {
-      openExpenseMenu.value = openExpenseMenu.value === expenseId ? null : expenseId
-      openCategoryMenu.value = null
-    }
-
-    const closeCategoryMenu = () => {
-      openCategoryMenu.value = null
-    }
-
-    const closeExpenseMenu = () => {
-      openExpenseMenu.value = null
-    }
-
-    const saveExpense = async () => {
-      if (!selectedBudgetId.value) return
+      this.selectedCategoryName = expense.category.name
+      this.categorySearch = ''
+      this.showCategoryDropdown = false
+      this.showAddExpenseModal = true
+    },
+    toggleCategoryMenu(categoryId) {
+      this.openCategoryMenu = this.openCategoryMenu === categoryId ? null : categoryId
+      this.openExpenseMenu = null
+    },
+    toggleExpenseMenu(expenseId) {
+      this.openExpenseMenu = this.openExpenseMenu === expenseId ? null : expenseId
+      this.openCategoryMenu = null
+    },
+    closeCategoryMenu() {
+      this.openCategoryMenu = null
+    },
+    closeExpenseMenu() {
+      this.openExpenseMenu = null
+    },
+    async saveExpense() {
+      if (!this.selectedBudgetId) return
       
       try {
         const data = {
-          ...expenseForm.value,
-          date: new Date(expenseForm.value.date),
-          budgetId: selectedBudgetId.value
+          ...this.expenseForm,
+          date: new Date(this.expenseForm.date),
+          budgetId: this.selectedBudgetId
         }
-        if (editingExpense.value) {
-          await updateExpense(editingExpense.value._id, data)
+        if (this.editingExpense) {
+          await updateExpense(this.editingExpense._id, data)
         } else {
           await createExpense(data)
         }
-        await loadData()
-        closeExpenseModal()
+        await this.loadData()
+        this.closeExpenseModal()
       } catch (error) {
         console.error('Error saving expense:', error)
       }
-    }
-
-    const saveExpenseAndCreateAnother = async () => {
-      if (!selectedBudgetId.value) return
-      if (editingExpense.value) return // Only allow when creating, not editing
+    },
+    async saveExpenseAndCreateAnother() {
+      if (!this.selectedBudgetId) return
+      if (this.editingExpense) return // Only allow when creating, not editing
       
       // Validate form
-      if (!expenseForm.value.description || !expenseForm.value.amount || !expenseForm.value.category || !expenseForm.value.date) {
+      if (!this.expenseForm.description || !this.expenseForm.amount || !this.expenseForm.category || !this.expenseForm.date) {
         return // Let HTML5 validation handle this
       }
       
       try {
         const data = {
-          ...expenseForm.value,
-          date: new Date(expenseForm.value.date),
-          budgetId: selectedBudgetId.value
+          ...this.expenseForm,
+          date: new Date(this.expenseForm.date),
+          budgetId: this.selectedBudgetId
         }
         await createExpense(data)
-        await loadData()
+        await this.loadData()
         // Reset form but keep modal open
-        expenseForm.value = {
+        this.expenseForm = {
           description: '',
           amount: 0,
           category: '',
           date: new Date().toISOString().split('T')[0]
         }
-        categorySearch.value = ''
-        selectedCategoryName.value = ''
-        showCategoryDropdown.value = false
-        highlightedCategoryIndex.value = -1
+        this.categorySearch = ''
+        this.selectedCategoryName = ''
+        this.showCategoryDropdown = false
+        this.highlightedCategoryIndex = -1
       } catch (error) {
         console.error('Error saving expense:', error)
       }
-    }
-
-
-    const handleDeleteCategory = async (category) => {
+    },
+    async handleDeleteCategory(category) {
       if (confirm(`Are you sure you want to delete "${category.name}"? This will also delete all expenses in this category.`)) {
         try {
           await deleteCategory(category._id)
-          await loadData()
+          await this.loadData()
         } catch (error) {
           console.error('Error deleting category:', error)
           alert('Error deleting category. Please try again.')
         }
       }
-    }
-
-    const handleDeleteExpense = async (expense) => {
+    },
+    async handleDeleteExpense(expense) {
       if (confirm(`Are you sure you want to delete this expense: "${expense.description}"?`)) {
         try {
           await deleteExpense(expense._id)
-          await loadData()
+          await this.loadData()
         } catch (error) {
           console.error('Error deleting expense:', error)
           alert('Error deleting expense. Please try again.')
         }
       }
-    }
-
-    const closeCategoryModal = () => {
-      showAddCategoryModal.value = false
-      editingCategory.value = null
-      categoryForm.value = {
+    },
+    closeCategoryModal() {
+      this.showAddCategoryModal = false
+      this.editingCategory = null
+      this.categoryForm = {
         name: '',
         budget: 0,
         rollover: false
       }
-    }
-
-    const closeExpenseModal = () => {
-      showAddExpenseModal.value = false
-      editingExpense.value = null
-      expenseForm.value = {
+    },
+    closeExpenseModal() {
+      this.showAddExpenseModal = false
+      this.editingExpense = null
+      this.expenseForm = {
         description: '',
         amount: 0,
         category: '',
         date: new Date().toISOString().split('T')[0]
       }
-      categorySearch.value = ''
-      selectedCategoryName.value = ''
-      showCategoryDropdown.value = false
-      highlightedCategoryIndex.value = -1
-    }
-
-    const formatDate = (date) => {
+      this.categorySearch = ''
+      this.selectedCategoryName = ''
+      this.showCategoryDropdown = false
+      this.highlightedCategoryIndex = -1
+    },
+    formatDate(date) {
       const d = new Date(date)
       // Use UTC methods to avoid timezone conversion issues
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
       return `${months[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`
-    }
-
-    // Close menus when clicking outside
-    const handleClickOutside = (event) => {
+    },
+    handleClickOutside(event) {
       if (!event.target.closest('.menu-container')) {
-        openCategoryMenu.value = null
-        openExpenseMenu.value = null
+        this.openCategoryMenu = null
+        this.openExpenseMenu = null
       }
       if (!event.target.closest('.searchable-select')) {
-        showCategoryDropdown.value = false
+        this.showCategoryDropdown = false
       }
     }
-
-    onMounted(() => {
-      loadBudgets()
-      document.addEventListener('click', handleClickOutside)
-    })
-
-    onUnmounted(() => {
-      document.removeEventListener('click', handleClickOutside)
-    })
-
-      return {
-        budgets,
-        selectedBudgetId,
-        categories,
-        expenses,
-        expensesByCategory,
-        thisMonthsExpenses,
-        budgetData,
-        totalBudget,
-        totalActual,
-        remaining,
-        selectedMonth,
-        months,
-        showAddCategoryModal,
-        showAddExpenseModal,
-        editingCategory,
-        editingExpense,
-        categoryForm,
-        expenseForm,
-        saveCategory,
-        saveCategoryAndCreateAnother,
-        filteredCategories,
-        categorySearch,
-        showCategoryDropdown,
-        selectedCategoryName,
-        highlightedCategoryIndex,
-        selectCategory,
-        handleCategoryKeydown,
-        editCategory,
-        handleDeleteCategory,
-        toggleCategoryMenu,
-        closeCategoryMenu,
-        saveExpense,
-        saveExpenseAndCreateAnother,
-        editExpense,
-        handleDeleteExpense,
-        toggleExpenseMenu,
-        closeExpenseMenu,
-        openCategoryMenu,
-        openExpenseMenu,
-        closeCategoryModal,
-        closeExpenseModal,
-        formatDate,
-        hasMultipleUsers,
-        showCategoryExpenses,
-        showCategoryExpensesModal,
-        selectedCategoryForExpenses,
-        categoryExpenses,
-        closeCategoryExpensesModal,
-        loadData,
-        loadBudgets
-      }
+  },
+  mounted() {
+    this.loadBudgets()
+    document.addEventListener('click', this.handleClickOutside)
+  },
+  beforeUnmount() {
+    document.removeEventListener('click', this.handleClickOutside)
   }
 }
 </script>
