@@ -9,7 +9,7 @@
         </div>
       </div>
     </nav>
-    <main class="main-content">
+    <main>
       <div class="container">
         <router-view />
       </div>
@@ -46,7 +46,7 @@ export default {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   padding: 0.5rem 0;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -56,38 +56,43 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+@media (min-width: 768px) {
+  .navbar .container {
+    padding: 0 2rem;
+  }
 }
 
 .navbar-user {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .navbar-user .user-name {
   color: #374151;
   font-weight: 500;
-}
-
-.navbar-user .btn-sm {
-  padding: 0.5rem 1rem;
   font-size: 0.875rem;
 }
 
+.navbar-user .btn-sm {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
 .logo {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   color: #1e293b;
   margin: 0;
   font-weight: 600;
 }
 
-.main-content {
-  padding: 2rem 0;
-}
 
 @media (max-width: 768px) {
-  .main-content {
-    padding: 1rem 0;
-  }
+
 }
 </style>

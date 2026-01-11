@@ -1,33 +1,7 @@
 <template>
   <div class="budget-view">
-    <div class="header-section">
-      <div class="header-left">
-        <h2>Budget Overview</h2>
-        <select v-if="budgets.length > 1" v-model="selectedBudgetId" @change="onBudgetChange" class="budget-select">
-          <option v-for="budget in budgets" :key="budget._id" :value="budget._id">
-            {{ budget.name }}
-          </option>
-        </select>
-        <span v-else-if="budgets.length === 1" class="budget-display">{{ budgets[0]?.name }}</span>
-      </div>
-      <div class="header-actions">
-        <select v-if="months.length > 1" v-model="selectedMonth" @change="loadData" class="month-select">
-          <option v-for="month in months" :key="month.value" :value="month.value">
-            {{ month.label }}
-          </option>
-        </select>
-        <span v-else class="month-display">{{ months[0]?.label || 'No months available' }}</span>
-        <button @click="showAddExpenseModal = true" class="btn btn-primary">
-          + Add Expense
-        </button>
-        <button @click="showAddCategoryModal = true" class="btn btn-secondary">
-          + Add Category
-        </button>
-      </div>
-    </div>
-
     <!-- Summary Cards -->
-    <div class="grid grid-3">
+    <div class="grid grid-3 summary-grid">
       <div class="card summary-card">
         <h3>Total Budget</h3>
         <p class="amount">${{ totalBudget.toFixed(2) }}</p>
@@ -49,6 +23,22 @@
 
     <!-- Budget Table -->
     <div class="card">
+      <div class="budget-card-header">
+        <select v-if="months.length > 1" v-model="selectedMonth" @change="loadData" class="month-select">
+          <option v-for="month in months" :key="month.value" :value="month.value">
+            {{ month.label }}
+          </option>
+        </select>
+        <span v-else class="month-display">{{ months[0]?.label || 'No months available' }}</span>
+        <div class="budget-card-actions">
+          <button @click="showAddExpenseModal = true" class="btn btn-primary">
+            + Add Expense
+          </button>
+          <button @click="showAddCategoryModal = true" class="btn btn-secondary">
+            + Add Category
+          </button>
+        </div>
+      </div>
       <table class="budget-table">
         <thead>
           <tr>
@@ -119,6 +109,9 @@
           </tr>
         </tbody>
       </table>
+      <div class="rollover-legend">
+        <span class="legend-text">↻ = the amounts in these categories roll over month to month</span>
+      </div>
     </div>
 
     <!-- Recent Expenses -->
@@ -135,7 +128,7 @@
               <p class="expense-description">{{ expense.description }}</p>
               <p class="expense-meta">
                 {{ expense.category.name }} • {{ formatDate(expense.date) }}
-                <span v-if="expense.createdBy" class="expense-creator">
+                <span v-if="expense.createdBy && hasMultipleUsers" class="expense-creator">
                   • by {{ expense.createdBy.name }}
                 </span>
               </p>
@@ -212,6 +205,47 @@
         </div>
         <form @submit.prevent="saveExpense">
           <div class="form-group">
+            <label>Date</label>
+            <input
+              type="date"
+              v-model="expenseForm.date"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <div class="searchable-select">
+              <input
+                type="text"
+                :value="selectedCategoryName || categorySearch"
+                @input="categorySearch = $event.target.value; if (selectedCategoryName) { expenseForm.category = ''; selectedCategoryName = ''; }; showCategoryDropdown = true; highlightedCategoryIndex = -1"
+                @focus="showCategoryDropdown = true; if (selectedCategoryName) { categorySearch = ''; }; highlightedCategoryIndex = -1"
+                @keydown="handleCategoryKeydown"
+                :placeholder="selectedCategoryName ? '' : 'Search or select a category'"
+                class="select-input"
+              />
+              <input type="hidden" :value="expenseForm.category" required />
+              <div v-if="showCategoryDropdown" class="select-dropdown">
+                <div
+                  v-for="(cat, index) in filteredCategories"
+                  :key="cat._id"
+                  @click="selectCategory(cat._id, cat.name)"
+                  class="select-option"
+                  :class="{ 
+                    'selected': expenseForm.category === cat._id,
+                    'highlighted': highlightedCategoryIndex === index
+                  }"
+                  :id="`category-option-${index}`"
+                >
+                  {{ cat.name }}
+                </div>
+                <div v-if="filteredCategories.length === 0" class="select-option no-results">
+                  No categories found
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
             <label>Description</label>
             <input v-model="expenseForm.description" required />
           </div>
@@ -222,27 +256,6 @@
               step="0.01"
               min="0"
               v-model.number="expenseForm.amount"
-              required
-            />
-          </div>
-          <div class="form-group">
-            <label>Category</label>
-            <select v-model="expenseForm.category" required>
-              <option value="">Select a category</option>
-              <option
-                v-for="cat in categories"
-                :key="cat._id"
-                :value="cat._id"
-              >
-                {{ cat.name }}
-              </option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Date</label>
-            <input
-              type="date"
-              v-model="expenseForm.date"
               required
             />
           </div>
@@ -267,10 +280,11 @@
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import {
   getBudgets,
+  getBudget,
   getCategories,
   createCategory,
   updateCategory,
@@ -300,6 +314,11 @@ export default {
     const editingExpense = ref(null)
     const openCategoryMenu = ref(null)
     const openExpenseMenu = ref(null)
+    const categorySearch = ref('')
+    const showCategoryDropdown = ref(false)
+    const selectedCategoryName = ref('')
+    const highlightedCategoryIndex = ref(-1)
+    const hasMultipleUsers = ref(false)
 
     const now = new Date()
     const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
@@ -349,7 +368,7 @@ export default {
     const budgetData = computed(() => {
       const data = categories.value.map(category => {
         const expenseData = expensesByCategory.value.find(
-          exp => exp.category._id === category._id
+          exp => String(exp.category._id) === String(category._id)
         )
         return {
           category,
@@ -372,17 +391,24 @@ export default {
       return totalBudget.value - totalActual.value
     })
 
+    const filteredCategories = computed(() => {
+      if (!categorySearch.value) {
+        return categories.value
+      }
+      const search = categorySearch.value.toLowerCase()
+      return categories.value.filter(cat => 
+        cat.name.toLowerCase().includes(search)
+      )
+    })
+
     const loadBudgets = async () => {
       try {
         const res = await getBudgets()
         budgets.value = res.data
         if (budgets.value.length > 0) {
-          // Use existing selectedBudgetId if valid, otherwise use first budget
-          const existingBudget = budgets.value.find(b => b._id === selectedBudgetId.value)
-          if (!existingBudget) {
-            selectedBudgetId.value = budgets.value[0]._id
-            setBudgetId(budgets.value[0]._id)
-          }
+          // User only has one budget, use it automatically
+          selectedBudgetId.value = budgets.value[0]._id
+          setBudgetId(budgets.value[0]._id)
           await loadData()
         }
       } catch (error) {
@@ -390,26 +416,37 @@ export default {
       }
     }
 
-    const onBudgetChange = () => {
-      setBudgetId(selectedBudgetId.value)
-      loadData()
-    }
-
     const loadData = async () => {
       if (!selectedBudgetId.value) return
       
       try {
-        const [month, year] = selectedMonth.value.split('-')
-        const [catsRes, expRes, expByCatRes, monthsRes] = await Promise.all([
+        const [year, month] = selectedMonth.value.split('-')
+        const [catsRes, expRes, expByCatRes, monthsRes, budgetRes] = await Promise.all([
           getCategories(selectedBudgetId.value),
           getExpenses(selectedBudgetId.value),
           getExpensesByCategory({ month, year, budgetId: selectedBudgetId.value }),
-          getExpenseMonths(selectedBudgetId.value)
+          getExpenseMonths(selectedBudgetId.value),
+          getBudget(selectedBudgetId.value)
         ])
         categories.value = catsRes.data
         expenses.value = expRes.data
         expensesByCategory.value = expByCatRes.data
         expenseMonths.value = monthsRes.data
+        
+        // Calculate total unique users (owner + members)
+        const budget = budgetRes.data
+        const uniqueUserIds = new Set()
+        if (budget.owner) {
+          uniqueUserIds.add(String(budget.owner._id || budget.owner))
+        }
+        if (budget.members) {
+          budget.members.forEach(member => {
+            if (member.user) {
+              uniqueUserIds.add(String(member.user._id || member.user))
+            }
+          })
+        }
+        hasMultipleUsers.value = uniqueUserIds.size > 1
         
         // Get recent expenses (last 10)
         recentExpenses.value = expRes.data.slice(0, 10)
@@ -467,6 +504,64 @@ export default {
       showAddCategoryModal.value = true
     }
 
+    const selectCategory = (categoryId, categoryName) => {
+      expenseForm.value.category = categoryId
+      selectedCategoryName.value = categoryName
+      categorySearch.value = ''
+      showCategoryDropdown.value = false
+      highlightedCategoryIndex.value = -1
+    }
+
+    const handleCategoryKeydown = (event) => {
+      if (!showCategoryDropdown.value || filteredCategories.value.length === 0) {
+        if (event.key === 'Enter') {
+          event.preventDefault()
+        }
+        return
+      }
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault()
+        highlightedCategoryIndex.value = Math.min(
+          highlightedCategoryIndex.value + 1,
+          filteredCategories.value.length - 1
+        )
+        // Scroll highlighted item into view
+        nextTick(() => {
+          const element = document.getElementById(`category-option-${highlightedCategoryIndex.value}`)
+          if (element) {
+            element.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+          }
+        })
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault()
+        highlightedCategoryIndex.value = Math.max(highlightedCategoryIndex.value - 1, -1)
+        // Scroll highlighted item into view
+        if (highlightedCategoryIndex.value >= 0) {
+          nextTick(() => {
+            const element = document.getElementById(`category-option-${highlightedCategoryIndex.value}`)
+            if (element) {
+              element.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+            }
+          })
+        }
+      } else if (event.key === 'Enter') {
+        event.preventDefault()
+        if (highlightedCategoryIndex.value >= 0 && highlightedCategoryIndex.value < filteredCategories.value.length) {
+          const cat = filteredCategories.value[highlightedCategoryIndex.value]
+          selectCategory(cat._id, cat.name)
+        } else if (filteredCategories.value.length === 1) {
+          // If only one category, select it
+          const cat = filteredCategories.value[0]
+          selectCategory(cat._id, cat.name)
+        }
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        showCategoryDropdown.value = false
+        highlightedCategoryIndex.value = -1
+      }
+    }
+
     const editExpense = (expense) => {
       editingExpense.value = expense
       expenseForm.value = {
@@ -475,6 +570,9 @@ export default {
         category: expense.category._id,
         date: new Date(expense.date).toISOString().split('T')[0]
       }
+      selectedCategoryName.value = expense.category.name
+      categorySearch.value = ''
+      showCategoryDropdown.value = false
       showAddExpenseModal.value = true
     }
 
@@ -541,6 +639,10 @@ export default {
           category: '',
           date: new Date().toISOString().split('T')[0]
         }
+        categorySearch.value = ''
+        selectedCategoryName.value = ''
+        showCategoryDropdown.value = false
+        highlightedCategoryIndex.value = -1
       } catch (error) {
         console.error('Error saving expense:', error)
       }
@@ -590,6 +692,10 @@ export default {
         category: '',
         date: new Date().toISOString().split('T')[0]
       }
+      categorySearch.value = ''
+      selectedCategoryName.value = ''
+      showCategoryDropdown.value = false
+      highlightedCategoryIndex.value = -1
     }
 
     const formatDate = (date) => {
@@ -605,6 +711,9 @@ export default {
       if (!event.target.closest('.menu-container')) {
         openCategoryMenu.value = null
         openExpenseMenu.value = null
+      }
+      if (!event.target.closest('.searchable-select')) {
+        showCategoryDropdown.value = false
       }
     }
 
@@ -638,6 +747,13 @@ export default {
         expenseForm,
         saveCategory,
         saveCategoryAndCreateAnother,
+        filteredCategories,
+        categorySearch,
+        showCategoryDropdown,
+        selectedCategoryName,
+        highlightedCategoryIndex,
+        selectCategory,
+        handleCategoryKeydown,
         editCategory,
         handleDeleteCategory,
         toggleCategoryMenu,
@@ -653,9 +769,9 @@ export default {
         closeCategoryModal,
         closeExpenseModal,
         formatDate,
+        hasMultipleUsers,
         loadData,
-        loadBudgets,
-        onBudgetChange
+        loadBudgets
       }
   }
 }
@@ -667,77 +783,21 @@ export default {
   margin: 0 auto;
 }
 
-.header-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.header-section h2 {
-  color: white;
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0;
-}
-
-.budget-select,
-.budget-display {
-  padding: 0.5rem 0.75rem;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.budget-select {
-  cursor: pointer;
-}
-
-.budget-select:focus {
-  outline: none;
-  border-color: rgba(255, 255, 255, 0.5);
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.budget-display {
-  cursor: default;
-}
-
-.header-actions {
-  display: flex;
-  gap: 1rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
 .month-select {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.875rem;
   background: white;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .month-display {
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 0.75rem;
   border: 2px solid #e5e7eb;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.875rem;
   background: white;
   color: #374151;
   display: inline-block;
@@ -750,25 +810,51 @@ export default {
 
 .summary-card {
   text-align: center;
+  padding: 1rem;
 }
 
 .summary-card h3 {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   color: #6b7280;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .summary-card .amount {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
+}
+
+.summary-grid {
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.budget-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.budget-card-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.budget-card-actions .btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
 }
 
 .budget-table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 1rem;
+  margin-top: 0;
 }
 
 .budget-table thead {
@@ -776,7 +862,7 @@ export default {
 }
 
 .budget-table th {
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 1rem;
   text-align: left;
   font-weight: 600;
   font-size: 0.875rem;
@@ -790,16 +876,28 @@ export default {
   border-bottom: 1px solid #e5e7eb;
 }
 
-.budget-table tbody tr:hover {
+.budget-table tbody tr:nth-child(even) {
   background: #f9fafb;
+}
+
+.budget-table tbody tr:nth-child(odd) {
+  background: white;
+}
+
+.budget-table tbody tr:hover {
+  background: #f3f4f6;
 }
 
 .budget-table tbody tr.over-budget {
   background: #fef2f2;
 }
 
+.budget-table tbody tr.over-budget:nth-child(even) {
+  background: #fee2e2;
+}
+
 .budget-table td {
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 1rem;
   vertical-align: middle;
 }
 
@@ -813,6 +911,26 @@ export default {
   color: #475569;
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+.rollover-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.rollover-legend .rollover-badge {
+  margin-left: 0;
+  font-size: 1rem;
+}
+
+.legend-text {
+  color: #6b7280;
 }
 
 .checkbox-label {
@@ -848,7 +966,7 @@ export default {
 }
 
 .total-row td {
-  padding: 0.5rem 1rem;
+  padding: 0.375rem 1rem;
   font-weight: 700;
   font-size: 1rem;
 }
@@ -974,6 +1092,72 @@ export default {
   font-weight: 500;
 }
 
+.searchable-select {
+  position: relative;
+  width: 100%;
+}
+
+.select-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  cursor: pointer;
+}
+
+.select-input:focus {
+  outline: none;
+  border-color: #475569;
+}
+
+.select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.select-option {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.select-option:hover {
+  background: #f9fafb;
+}
+
+.select-option.selected {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.select-option.highlighted {
+  background: #e5e7eb;
+  font-weight: 500;
+}
+
+.select-option.no-results {
+  color: #9ca3af;
+  cursor: default;
+}
+
+.select-option.no-results:hover {
+  background: white;
+}
+
 .expense-amount {
   font-weight: 700;
   font-size: 1.125rem;
@@ -994,22 +1178,18 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .header-section {
+  .budget-card-header {
     flex-direction: column;
     align-items: stretch;
   }
   
-  .header-section h2 {
-    font-size: 1.75rem;
-  }
-  
-  .header-actions {
-    flex-direction: column;
+  .month-select,
+  .month-display,
+  .budget-card-actions {
     width: 100%;
   }
   
-  .month-select,
-  .header-actions .btn {
+  .budget-card-actions .btn {
     width: 100%;
   }
   
