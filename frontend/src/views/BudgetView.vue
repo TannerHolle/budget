@@ -54,7 +54,8 @@
           <tr
             v-for="item in budgetData"
             :key="item.category._id"
-            :class="{ 'over-budget': item.actual > item.budget && item.budget > 0 }"
+            :class="{ 'over-budget': item.actual > item.budget && item.budget > 0, 'clickable-row': true }"
+            @click="showCategoryExpenses(item.category)"
           >
             <td>
               <span class="category-name">{{ item.category.name }}</span>
@@ -80,7 +81,7 @@
               </span>
               <span v-else class="empty-value">0.0%</span>
             </td>
-            <td class="actions">
+            <td class="actions" @click.stop>
               <div class="menu-container">
                 <button @click.stop="toggleCategoryMenu(item.category._id)" class="btn-menu" title="Menu">⋯</button>
                 <div v-if="openCategoryMenu === item.category._id" class="dropdown-menu">
@@ -114,12 +115,12 @@
       </div>
     </div>
 
-    <!-- Recent Expenses -->
+    <!-- This Month's Expenses -->
     <div class="card">
-      <h3>Recent Expenses</h3>
+      <h3>This Month's Expenses</h3>
       <div class="expenses-list">
         <div
-          v-for="expense in recentExpenses"
+          v-for="expense in thisMonthsExpenses"
           :key="expense._id"
           class="expense-item"
         >
@@ -145,8 +146,8 @@
             </div>
           </div>
         </div>
-        <p v-if="recentExpenses.length === 0" class="empty-state">
-          No expenses yet. Add your first expense!
+        <p v-if="thisMonthsExpenses.length === 0" class="empty-state">
+          No expenses for {{ months.find(m => m.value === selectedMonth)?.label || 'this month' }} yet.
         </p>
       </div>
     </div>
@@ -193,6 +194,48 @@
             <button type="submit" class="btn btn-primary">Save</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Category Expenses Modal -->
+    <div v-if="showCategoryExpensesModal" class="modal-overlay" @click.self="closeCategoryExpensesModal">
+      <div class="modal">
+        <div class="modal-header">
+          <h2>{{ selectedCategoryForExpenses?.name }} Expenses</h2>
+          <button @click="closeCategoryExpensesModal" class="close-btn">×</button>
+        </div>
+        <div class="category-expenses-list">
+          <div
+            v-for="expense in categoryExpenses"
+            :key="expense._id"
+            class="expense-item"
+          >
+            <div class="expense-info">
+              <div class="expense-details">
+                <p class="expense-description">{{ expense.description }}</p>
+                <p class="expense-meta">
+                  {{ formatDate(expense.date) }}
+                  <span v-if="expense.createdBy && hasMultipleUsers" class="expense-creator">
+                    • by {{ expense.createdBy.name }}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div class="expense-actions">
+              <div class="expense-amount">${{ expense.amount.toFixed(2) }}</div>
+              <div class="menu-container">
+                <button @click.stop="toggleExpenseMenu(expense._id)" class="btn-menu" title="Menu">⋯</button>
+                <div v-if="openExpenseMenu === expense._id" class="dropdown-menu">
+                  <button @click="editExpense(expense); closeExpenseMenu()" class="dropdown-item">Edit</button>
+                  <button @click="handleDeleteExpense(expense); closeExpenseMenu()" class="dropdown-item delete">Delete</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <p v-if="categoryExpenses.length === 0" class="empty-state">
+            No expenses in this category for {{ months.find(m => m.value === selectedMonth)?.label || 'this month' }}.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -306,7 +349,6 @@ export default {
     const categories = ref([])
     const expenses = ref([])
     const expensesByCategory = ref([])
-    const recentExpenses = ref([])
     const expenseMonths = ref([])
     const showAddCategoryModal = ref(false)
     const showAddExpenseModal = ref(false)
@@ -319,6 +361,8 @@ export default {
     const selectedCategoryName = ref('')
     const highlightedCategoryIndex = ref(-1)
     const hasMultipleUsers = ref(false)
+    const showCategoryExpensesModal = ref(false)
+    const selectedCategoryForExpenses = ref(null)
 
     const now = new Date()
     const selectedMonth = ref(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
@@ -401,6 +445,30 @@ export default {
       )
     })
 
+    const thisMonthsExpenses = computed(() => {
+      const [year, month] = selectedMonth.value.split('-')
+      const monthNum = parseInt(month)
+      const yearNum = parseInt(year)
+      
+      return expenses.value.filter(expense => {
+        // Check if date is in selected month
+        const expenseDate = new Date(expense.date)
+        const expenseMonth = expenseDate.getUTCMonth() + 1
+        const expenseYear = expenseDate.getUTCFullYear()
+        
+        return expenseMonth === monthNum && expenseYear === yearNum
+      }).sort((a, b) => new Date(b.date) - new Date(a.date))
+    })
+
+    const categoryExpenses = computed(() => {
+      if (!selectedCategoryForExpenses.value) return []
+      
+      return thisMonthsExpenses.value.filter(expense => {
+        // Check if category matches
+        return String(expense.category._id) === String(selectedCategoryForExpenses.value._id)
+      })
+    })
+
     const loadBudgets = async () => {
       try {
         const res = await getBudgets()
@@ -447,9 +515,6 @@ export default {
           })
         }
         hasMultipleUsers.value = uniqueUserIds.size > 1
-        
-        // Get recent expenses (last 10)
-        recentExpenses.value = expRes.data.slice(0, 10)
       } catch (error) {
         console.error('Error loading data:', error)
       }
@@ -510,6 +575,17 @@ export default {
       categorySearch.value = ''
       showCategoryDropdown.value = false
       highlightedCategoryIndex.value = -1
+    }
+
+    const showCategoryExpenses = (category) => {
+      selectedCategoryForExpenses.value = category
+      showCategoryExpensesModal.value = true
+    }
+
+    const closeCategoryExpensesModal = () => {
+      showCategoryExpensesModal.value = false
+      selectedCategoryForExpenses.value = null
+      openExpenseMenu.value = null
     }
 
     const handleCategoryKeydown = (event) => {
@@ -732,7 +808,7 @@ export default {
         categories,
         expenses,
         expensesByCategory,
-        recentExpenses,
+        thisMonthsExpenses,
         budgetData,
         totalBudget,
         totalActual,
@@ -770,6 +846,11 @@ export default {
         closeExpenseModal,
         formatDate,
         hasMultipleUsers,
+        showCategoryExpenses,
+        showCategoryExpensesModal,
+        selectedCategoryForExpenses,
+        categoryExpenses,
+        closeCategoryExpensesModal,
         loadData,
         loadBudgets
       }
@@ -886,6 +967,14 @@ export default {
 
 .budget-table tbody tr:hover {
   background: #f3f4f6;
+}
+
+.budget-table tbody tr.clickable-row {
+  cursor: pointer;
+}
+
+.budget-table tbody tr.clickable-row:hover {
+  background: #e5e7eb;
 }
 
 .budget-table tbody tr.over-budget {
@@ -1090,6 +1179,16 @@ export default {
 .expense-creator {
   color: #475569;
   font-weight: 500;
+}
+
+.category-expenses-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+
+.category-expenses-list .expense-item {
+  margin-bottom: 0.75rem;
 }
 
 .searchable-select {
