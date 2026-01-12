@@ -1,11 +1,11 @@
 <template>
   <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal">
+    <div class="modal category-expenses-modal">
       <div class="modal-header">
         <h2>{{ category?.name }} Expenses</h2>
         <button @click="$emit('close')" class="close-btn">×</button>
       </div>
-      <div class="category-expenses-list">
+      <div :class="['category-expenses-list', { 'has-bottom-padding': isLastItemMenuOpen }]">
         <div
           v-for="expense in expenses"
           :key="expense._id"
@@ -71,6 +71,13 @@ export default {
       openMenu: null
     }
   },
+  computed: {
+    isLastItemMenuOpen() {
+      if (!this.openMenu || this.expenses.length === 0) return false
+      const lastExpense = this.expenses[this.expenses.length - 1]
+      return lastExpense._id === this.openMenu
+    }
+  },
   methods: {
     formatCurrency(value) {
       return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -108,10 +115,17 @@ export default {
 </script>
 
 <style scoped>
+.category-expenses-modal {
+  max-height: 95vh;
+}
+
 .category-expenses-list {
-  max-height: 60vh;
-  overflow-y: auto;
   margin-top: 0.75rem;
+  transition: padding-bottom 0.2s ease;
+}
+
+.category-expenses-list.has-bottom-padding {
+  padding-bottom: 4rem;
 }
 
 .category-expenses-list .expense-item {
@@ -213,7 +227,7 @@ export default {
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   min-width: 100px;
-  z-index: 10;
+  z-index: 1001;
   overflow: hidden;
 }
 

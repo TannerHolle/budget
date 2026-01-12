@@ -29,10 +29,8 @@
         <tr>
           <th v-if="reorderMode" style="width: 30px;"></th>
           <th>Category</th>
-          <th>Amount</th>
-          <th>Budget %</th>
-          <th>Actual</th>
-          <th>Actual %</th>
+          <th>Budget</th>
+          <th>Spent</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -60,6 +58,9 @@
           </td>
           <td>
             <span class="category-name">{{ item.category.name }}</span>
+            <span v-if="totalBudget > 0" class="category-percent">
+              ({{ ((item.budget / totalBudget) * 100).toFixed(1) }}%)
+            </span>
             <span v-if="item.category.rollover" class="rollover-badge" title="Rollover enabled">↻</span>
           </td>
           <td>
@@ -67,20 +68,8 @@
             <span v-else class="empty-value">-</span>
           </td>
           <td>
-            <span v-if="totalBudget > 0">
-              {{ ((item.budget / totalBudget) * 100).toFixed(1) }}%
-            </span>
-            <span v-else class="empty-value">-</span>
-          </td>
-          <td>
             <span v-if="item.actual > 0" class="actual-value">${{ formatCurrency(item.actual) }}</span>
             <span v-else class="empty-value">-</span>
-          </td>
-          <td>
-            <span v-if="item.actual > 0" class="actual-value">
-              {{ item.budget > 0 ? ((item.actual / item.budget) * 100).toFixed(1) : '0.0' }}%
-            </span>
-            <span v-else class="empty-value">0.0%</span>
           </td>
           <td class="actions" @click.stop>
             <div class="menu-container">
@@ -96,16 +85,8 @@
           <td v-if="reorderMode"></td>
           <td><strong>Total</strong></td>
           <td><strong>${{ formatCurrency(totalBudget) }}</strong></td>
-          <td><strong v-if="totalBudget > 0">100.0%</strong><strong v-else>-</strong></td>
           <td>
             <strong v-if="totalActual > 0" class="actual-value">${{ formatCurrency(totalActual) }}</strong>
-            <strong v-else>-</strong>
-          </td>
-          <td>
-            <strong v-if="totalBudget > 0 && totalActual > 0" class="actual-value">
-              {{ ((totalActual / totalBudget) * 100).toFixed(1) }}%
-            </strong>
-            <strong v-else-if="totalBudget > 0">0.0%</strong>
             <strong v-else>-</strong>
           </td>
           <td></td>
@@ -442,6 +423,13 @@ export default {
   font-weight: 600;
   color: #111827;
   font-size: 0.8125rem;
+}
+
+.category-percent {
+  margin-left: 0.25rem;
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  font-weight: 400;
 }
 
 .rollover-badge {
