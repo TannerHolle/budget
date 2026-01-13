@@ -31,7 +31,13 @@ const budgetSchema = new mongoose.Schema({
     type: String,
     unique: true,
     sparse: true
-  }
+  },
+  plaidAccessTokens: [{
+    itemId: String,
+    accessToken: String,
+    institutionId: String,
+    institutionName: String
+  }]
 }, {
   timestamps: true
 });

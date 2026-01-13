@@ -30,6 +30,19 @@ const expenseSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Budget',
     required: true
+  },
+  plaidTransactionId: {
+    type: String,
+    sparse: true,
+    unique: true
+  },
+  accountName: {
+    type: String,
+    sparse: true
+  },
+  institutionName: {
+    type: String,
+    sparse: true
   }
 }, {
   timestamps: true

@@ -19,6 +19,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/budgets', require('./routes/budgets'));
 app.use('/api/categories', require('./routes/categories'));
 app.use('/api/expenses', require('./routes/expenses'));
+app.use('/api/plaid', require('./routes/plaid'));
 
 // Connect to MongoDB (non-blocking - server will start even if DB fails)
 if (!process.env.MONGODB_URI) {

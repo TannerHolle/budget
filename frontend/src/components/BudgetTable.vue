@@ -16,6 +16,9 @@
             <button @click="handleInviteUser" class="dropdown-item">Invite User</button>
           </div>
         </div>
+        <button @click="$emit('sync-transactions')" class="btn btn-secondary" :disabled="syncing">
+          {{ syncing ? 'Syncing...' : 'Sync Transactions' }}
+        </button>
         <button @click="$emit('add-expense')" class="btn btn-primary">
           + Add Expense
         </button>
@@ -122,6 +125,10 @@ export default {
     selectedMonth: {
       type: String,
       required: true
+    },
+    syncing: {
+      type: Boolean,
+      default: false
     }
   },
   data() {

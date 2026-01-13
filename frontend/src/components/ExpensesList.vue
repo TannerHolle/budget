@@ -12,6 +12,9 @@
             <p class="expense-description">{{ expense.description }}</p>
             <p class="expense-meta">
               {{ expense.category.name }} • {{ formatDate(expense.date) }}
+              <span v-if="expense.accountName && expense.institutionName" class="expense-account">
+                • {{ expense.accountName }} ({{ expense.institutionName }})
+              </span>
               <span v-if="expense.createdBy && hasMultipleUsers" class="expense-creator">
                 • by {{ expense.createdBy.name }}
               </span>
@@ -146,6 +149,11 @@ h3 {
 .expense-meta {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+.expense-account {
+  color: #9ca3af;
+  font-size: 0.7rem;
 }
 
 .expense-creator {

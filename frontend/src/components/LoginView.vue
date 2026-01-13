@@ -135,8 +135,9 @@ export default {
         localStorage.setItem('user', JSON.stringify(res.data.user))
         localStorage.setItem('budgetId', res.data.budgetId || '')
         
-        // Emit login event to parent
+        // Emit login event to parent and navigate
         this.$emit('login')
+        this.$router.push('/')
       } catch (err) {
         this.error = err.response?.data?.error || 'An error occurred'
       } finally {

@@ -223,6 +223,66 @@ router.get('/months', auth, async (req, res) => {
   }
 });
 
+// Bulk create expenses (for synced transactions)
+router.post('/bulk', auth, async (req, res) => {
+  try {
+    const { budgetId, transactions } = req.body;
+    if (!budgetId) {
+      return res.status(400).json({ error: 'budgetId is required' });
+    }
+    if (!transactions || !Array.isArray(transactions)) {
+      return res.status(400).json({ error: 'transactions array is required' });
+    }
+
+    const hasAccess = await verifyBudgetAccess(req.user._id, budgetId);
+    if (!hasAccess) {
+      return res.status(403).json({ error: 'Access denied to this budget' });
+    }
+
+    const expenses = [];
+    for (const txn of transactions) {
+      if (!txn.category || !txn.transaction_id) {
+        continue; // Skip if no category assigned
+      }
+
+      let expenseDate = new Date(txn.date);
+      if (typeof txn.date === 'string') {
+        const dateParts = txn.date.split('T')[0].split('-');
+        if (dateParts.length === 3) {
+          expenseDate = new Date(Date.UTC(
+            parseInt(dateParts[0]),
+            parseInt(dateParts[1]) - 1,
+            parseInt(dateParts[2]),
+            0, 0, 0, 0
+          ));
+        } else {
+          expenseDate = new Date(txn.date);
+        }
+      }
+
+      const expense = new Expense({
+        amount: txn.amount,
+        description: txn.merchant_name || txn.name || 'Plaid Transaction',
+        category: txn.category,
+        date: expenseDate,
+        budgetId,
+        createdBy: req.user._id,
+        plaidTransactionId: txn.transaction_id,
+        accountName: txn.accountName,
+        institutionName: txn.institutionName
+      });
+
+      await expense.save();
+      await expense.populate('category');
+      expenses.push(expense);
+    }
+
+    res.status(201).json({ expenses, count: expenses.length });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get expenses by category
 router.get('/by-category', auth, async (req, res) => {
   try {

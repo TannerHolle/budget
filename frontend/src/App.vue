@@ -2,7 +2,14 @@
   <div id="app">
     <nav v-if="isAuthenticated" class="navbar">
       <div class="container">
-        <h1 class="logo">Budget Tracker</h1>
+        <div class="navbar-left">
+          <h1 class="logo">Budget Tracker</h1>
+          <nav class="nav-links">
+            <router-link to="/" class="nav-link">Budget/Expenses</router-link>
+            <router-link to="/net-worth" class="nav-link">Net Worth</router-link>
+            <router-link to="/bank-connections" class="nav-link">Connected Accounts</router-link>
+          </nav>
+        </div>
         <div class="navbar-user">
           <span class="user-name">{{ user?.name }}</span>
           <button @click="handleLogout" class="btn btn-secondary btn-sm">Logout</button>
@@ -11,30 +18,28 @@
     </nav>
     <main>
       <div class="container">
-        <LoginView v-if="!isAuthenticated" @login="handleLogin" />
-        <BudgetView v-else />
+        <router-view @login="handleLogin" />
       </div>
     </main>
   </div>
 </template>
 
 <script>
-import LoginView from './components/LoginView.vue'
-import BudgetView from './components/BudgetView.vue'
-
 export default {
   name: 'App',
-  components: {
-    LoginView,
-    BudgetView
-  },
   data() {
     return {
       user: null,
       isAuthenticated: !!localStorage.getItem('token')
     }
   },
+  watch: {
+    '$route'() {
+      this.updateAuthState()
+    }
+  },
   mounted() {
+    this.updateAuthState()
     // Load user from localStorage
     const userStr = localStorage.getItem('user')
     if (userStr) {
@@ -51,6 +56,9 @@ export default {
     }
   },
   methods: {
+    updateAuthState() {
+      this.isAuthenticated = !!localStorage.getItem('token')
+    },
     handleLogin() {
       // Reload user after login
       this.isAuthenticated = true
@@ -62,6 +70,7 @@ export default {
           this.user = null
         }
       }
+      this.$router.push('/')
     },
     handleLogout() {
       localStorage.removeItem('token')
@@ -69,11 +78,7 @@ export default {
       localStorage.removeItem('budgetId')
       this.user = null
       this.isAuthenticated = false
-      
-      // Clear invite token from URL and redirect to clean login page
-      if (window.location.search.includes('invite=')) {
-        window.history.replaceState({}, '', window.location.pathname)
-      }
+      this.$router.push('/login')
     },
     async loadCurrentUser() {
       try {
@@ -112,6 +117,37 @@ export default {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0 1rem;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav-link {
+  color: #6b7280;
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.nav-link:hover {
+  color: #374151;
+  background: #f3f4f6;
+}
+
+.nav-link.router-link-active {
+  color: #475569;
+  background: #e5e7eb;
 }
 
 @media (min-width: 768px) {

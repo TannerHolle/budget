@@ -1,19 +1,24 @@
 <template>
   <div class="budget-view">
-    <!-- Summary Cards -->
-    <!-- <SummaryCards
-      :total-budget="totalBudget"
-      :total-actual="totalActual"
-      :remaining="remaining"
-    /> -->
+    <div v-if="loading" class="loading-state">
+      <div class="spinner"></div>
+    </div>
+    <template v-else>
+      <!-- Summary Cards -->
+      <!-- <SummaryCards
+        :total-budget="totalBudget"
+        :total-actual="totalActual"
+        :remaining="remaining"
+      /> -->
 
-    <!-- Budget Table -->
+      <!-- Budget Table -->
     <BudgetTable
       :budget-data="budgetData"
       :total-budget="totalBudget"
       :total-actual="totalActual"
       :months="months"
       :selected-month="selectedMonth"
+      :syncing="syncing"
       @update:selectedMonth="selectedMonth = $event"
       @month-changed="handleMonthChange"
       @add-expense="showAddExpenseModal = true"
@@ -23,6 +28,7 @@
       @delete-category="handleDeleteCategory"
       @reorder-categories="handleReorderCategories"
       @invite-user="showInviteUserModal = true"
+      @sync-transactions="syncTransactions"
     />
 
     <!-- This Month's Expenses -->
@@ -77,6 +83,17 @@
       :budget-id="selectedBudgetId"
       @close="closeInviteUserModal"
     />
+
+    <!-- Categorize Transactions Modal -->
+    <CategorizeTransactionsModal
+      :show="showCategorizeModal"
+      :transactions="transactionsToCategorize"
+      :categories="categories"
+      :importing="importing"
+      @close="closeCategorizeModal"
+      @import="importTransactions"
+    />
+    </template>
   </div>
 </template>
 
@@ -95,6 +112,8 @@ import {
   deleteExpense,
   getExpensesByCategory,
   getExpenseMonths,
+  syncPlaidTransactions,
+  createExpensesFromTransactions,
 } from '../api/api'
 import SummaryCards from './SummaryCards.vue'
 import BudgetTable from './BudgetTable.vue'
@@ -103,6 +122,7 @@ import CategoryModal from './CategoryModal.vue'
 import CategoryExpensesModal from './CategoryExpensesModal.vue'
 import ExpenseModal from './ExpenseModal.vue'
 import InviteUserModal from './InviteUserModal.vue'
+import CategorizeTransactionsModal from './CategorizeTransactionsModal.vue'
 
 export default {
   name: 'BudgetView',
@@ -113,7 +133,8 @@ export default {
     CategoryModal,
     CategoryExpensesModal,
     ExpenseModal,
-    InviteUserModal
+    InviteUserModal,
+    CategorizeTransactionsModal
   },
   data() {
     const now = new Date()
@@ -133,6 +154,12 @@ export default {
       showCategoryExpensesModal: false,
       selectedCategoryForExpenses: null,
       selectedMonth: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+      syncing: false,
+      importing: false,
+      transactionsToCategorize: [],
+      showCategorizeModal: false,
+      syncResult: null,
+      loading: true,
       categoryForm: {
         name: '',
         budget: 0,
@@ -230,6 +257,7 @@ export default {
 
   methods: {
     async loadBudgets() {
+      this.loading = true
       try {
         const res = await getBudgets()
         this.budgets = res.data
@@ -237,13 +265,19 @@ export default {
           this.selectedBudgetId = this.budgets[0]._id
           localStorage.setItem('budgetId', this.budgets[0]._id)
           await this.loadData()
+        } else {
+          this.loading = false
         }
       } catch (error) {
         console.error('Error loading budgets:', error)
+        this.loading = false
       }
     },
     async loadData() {
-      if (!this.selectedBudgetId) return
+      if (!this.selectedBudgetId) {
+        this.loading = false
+        return
+      }
       
       try {
         const [year, month] = this.selectedMonth.split('-')
@@ -274,6 +308,8 @@ export default {
         this.hasMultipleUsers = uniqueUserIds.size > 1
       } catch (error) {
         console.error('Error loading data:', error)
+      } finally {
+        this.loading = false
       }
     },
     handleMonthChange() {
@@ -459,6 +495,56 @@ export default {
     },
     closeInviteUserModal() {
       this.showInviteUserModal = false
+    },
+    async syncTransactions() {
+      if (!this.selectedBudgetId) {
+        alert('Please select a budget first')
+        return
+      }
+      this.syncing = true
+      this.syncResult = null
+      try {
+        const endDate = new Date().toISOString().split('T')[0]
+        const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        
+        const response = await syncPlaidTransactions(this.selectedBudgetId, startDate, endDate)
+        
+        if (response.data.transactions && response.data.transactions.length > 0) {
+          this.transactionsToCategorize = response.data.transactions.map(t => ({
+            ...t,
+            category: ''
+          }))
+          this.showCategorizeModal = true
+          this.syncResult = {
+            message: `Found ${response.data.transactions.length} transaction${response.data.transactions.length !== 1 ? 's' : ''} to categorize`
+          }
+        } else {
+          this.syncResult = response.data
+        }
+      } catch (error) {
+        console.error('Error syncing transactions:', error)
+        alert(error.response?.data?.error || 'Failed to sync transactions. Please try again.')
+      } finally {
+        this.syncing = false
+      }
+    },
+    closeCategorizeModal() {
+      this.showCategorizeModal = false
+      this.transactionsToCategorize = []
+    },
+    async importTransactions(categorizedTransactions) {
+      if (!this.selectedBudgetId) return
+      this.importing = true
+      try {
+        await createExpensesFromTransactions(this.selectedBudgetId, categorizedTransactions)
+        this.closeCategorizeModal()
+        await this.loadData() // Reload expenses and budget data
+      } catch (error) {
+        console.error('Error importing transactions:', error)
+        alert(error.response?.data?.error || 'Failed to import transactions. Please try again.')
+      } finally {
+        this.importing = false
+      }
     }
   },
   mounted() {
@@ -471,5 +557,35 @@ export default {
 .budget-view {
   max-width: 1000px;
   margin: 0 auto;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.loading-state p {
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

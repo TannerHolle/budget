@@ -18,7 +18,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true
-  }
+  },
+  plaidAccessTokens: [{
+    itemId: String,
+    accessToken: String,
+    institutionId: String,
+    institutionName: String
+  }]
 }, {
   timestamps: true
 });
