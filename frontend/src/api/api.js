@@ -68,4 +68,7 @@ export const syncTellerTransactions = (budgetId, startDate, endDate) => api.post
 export const createExpensesFromTransactions = (budgetId, transactions) => api.post('/expenses/bulk', { budgetId, transactions })
 export const removeTellerConnection = (connectionId, budgetId) => api.delete(`/teller/remove-connection/${connectionId}`, { params: { budgetId } })
 
+// Net Worth
+export const getNetWorth = (budgetId) => api.get('/networth', { params: { budgetId } })
+
 export default api

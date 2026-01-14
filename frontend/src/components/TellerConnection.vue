@@ -12,7 +12,11 @@
           {{ loading ? 'Loading...' : 'Add Another Account' }}
         </button>
       </div>
-      <div v-if="accounts.length === 0" class="no-connections">
+      <div v-if="loadingAccounts" class="loading-accounts">
+        <div class="spinner"></div>
+        <p>Loading accounts...</p>
+      </div>
+      <div v-else-if="accounts.length === 0" class="no-connections">
         <p>No bank accounts connected</p>
         <button @click="openTellerConnect" class="btn btn-primary" :disabled="loading">
           {{ loading ? 'Loading...' : 'Connect Bank Account' }}
@@ -95,6 +99,7 @@ export default {
       transactionsToCategorize: [],
       categories: [],
       loading: false,
+      loadingAccounts: false,
       syncing: false,
       importing: false,
       removingAccount: null,
@@ -130,11 +135,14 @@ export default {
     },
     async loadAccounts() {
       if (!this.budgetId) return
+      this.loadingAccounts = true
       try {
         const response = await getTellerAccounts(this.budgetId)
         this.accounts = response.data.accounts || []
       } catch (error) {
         console.error('Error loading accounts:', error)
+      } finally {
+        this.loadingAccounts = false
       }
     },
     async loadCategories() {
@@ -343,6 +351,36 @@ export default {
 .btn-small {
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
+}
+
+.loading-accounts {
+  text-align: center;
+  padding: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.loading-accounts .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-accounts p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .no-connections {
