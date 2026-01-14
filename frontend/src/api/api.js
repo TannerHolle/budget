@@ -59,13 +59,13 @@ export const createExpense = (data) => api.post('/expenses', data)
 export const updateExpense = (id, data) => api.put(`/expenses/${id}`, data)
 export const deleteExpense = (id) => api.delete(`/expenses/${id}`)
 
-// Plaid
-export const createLinkToken = (budgetId) => api.post('/plaid/create-link-token', { budgetId })
-export const exchangePublicToken = (publicToken, metadata, budgetId) => api.post('/plaid/exchange-public-token', { public_token: publicToken, metadata, budgetId })
-export const getPlaidAccounts = (budgetId) => api.get('/plaid/accounts', { params: { budgetId } })
-export const getPlaidTransactions = (startDate, endDate, budgetId) => api.get('/plaid/transactions', { params: { start_date: startDate, end_date: endDate, budgetId } })
-export const syncPlaidTransactions = (budgetId, startDate, endDate) => api.post('/plaid/sync-transactions', { budgetId, start_date: startDate, end_date: endDate })
+// Teller
+export const createLinkToken = (budgetId) => api.post('/teller/create-link-token', { budgetId })
+export const exchangePublicToken = (accessToken, metadata, budgetId) => api.post('/teller/exchange-public-token', { access_token: accessToken, metadata, budgetId })
+export const getTellerAccounts = (budgetId) => api.get('/teller/accounts', { params: { budgetId } })
+export const getTellerTransactions = (startDate, endDate, budgetId) => api.get('/teller/transactions', { params: { start_date: startDate, end_date: endDate, budgetId } })
+export const syncTellerTransactions = (budgetId, startDate, endDate) => api.post('/teller/sync-transactions', { budgetId, start_date: startDate, end_date: endDate })
 export const createExpensesFromTransactions = (budgetId, transactions) => api.post('/expenses/bulk', { budgetId, transactions })
-export const removePlaidConnection = (itemId, budgetId) => api.delete(`/plaid/remove-connection/${itemId}`, { params: { budgetId } })
+export const removeTellerConnection = (connectionId, budgetId) => api.delete(`/teller/remove-connection/${connectionId}`, { params: { budgetId } })
 
 export default api

@@ -31,7 +31,7 @@ const expenseSchema = new mongoose.Schema({
     ref: 'Budget',
     required: true
   },
-  plaidTransactionId: {
+  tellerTransactionId: {
     type: String,
     sparse: true,
     unique: true

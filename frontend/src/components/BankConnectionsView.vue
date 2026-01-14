@@ -3,18 +3,18 @@
     <div v-if="loading" class="loading-state">
       <div class="spinner"></div>
     </div>
-    <PlaidConnection v-else :budget-id="selectedBudgetId" @connected="handleConnected" />
+    <TellerConnection v-else :budget-id="selectedBudgetId" @connected="handleConnected" />
   </div>
 </template>
 
 <script>
-import PlaidConnection from './PlaidConnection.vue'
+import TellerConnection from './TellerConnection.vue'
 import { getBudgets } from '../api/api'
 
 export default {
   name: 'BankConnectionsView',
   components: {
-    PlaidConnection
+    TellerConnection
   },
   data() {
     return {

@@ -1,11 +1,11 @@
 <template>
-  <div class="plaid-connection">
+  <div class="teller-connection">
     <div class="card">
       <div class="card-header">
         <h3>Bank Connections</h3>
         <button 
           v-if="accounts.length > 0"
-          @click="openPlaidLink" 
+          @click="openTellerConnect" 
           class="btn btn-secondary btn-small" 
           :disabled="loading"
         >
@@ -14,7 +14,7 @@
       </div>
       <div v-if="accounts.length === 0" class="no-connections">
         <p>No bank accounts connected</p>
-        <button @click="openPlaidLink" class="btn btn-primary" :disabled="loading">
+        <button @click="openTellerConnect" class="btn btn-primary" :disabled="loading">
           {{ loading ? 'Loading...' : 'Connect Bank Account' }}
         </button>
       </div>
@@ -30,12 +30,12 @@
               ${{ formatCurrency(account.balance.current || 0) }}
             </div>
             <button
-              @click="removeAccount(account.itemId, account.institutionName)"
+              @click="removeAccount(account.connectionId, account.institutionName)"
               class="btn-remove-account"
               title="Remove bank connection"
-              :disabled="removingAccount === account.itemId"
+              :disabled="removingAccount === account.connectionId"
             >
-              {{ removingAccount === account.itemId ? '...' : '×' }}
+              {{ removingAccount === account.connectionId ? '...' : '×' }}
             </button>
           </div>
         </div>
@@ -63,11 +63,11 @@
 </template>
 
 <script>
-import { createLinkToken, exchangePublicToken, getPlaidAccounts, removePlaidConnection, syncPlaidTransactions, createExpensesFromTransactions, getCategories } from '../api/api'
+import { createLinkToken, exchangePublicToken, getTellerAccounts, removeTellerConnection, syncTellerTransactions, createExpensesFromTransactions, getCategories } from '../api/api'
 import CategorizeTransactionsModal from './CategorizeTransactionsModal.vue'
 
 export default {
-  name: 'PlaidConnection',
+  name: 'TellerConnection',
   components: {
     CategorizeTransactionsModal
   },
@@ -88,7 +88,7 @@ export default {
       removingAccount: null,
       syncResult: null,
       showCategorizeModal: false,
-      linkHandler: null
+      tellerConnect: null
     }
   },
   watch: {
@@ -100,11 +100,11 @@ export default {
   mounted() {
     this.loadAccounts()
     this.loadCategories()
-    this.loadPlaidScript()
+    this.loadTellerConnectScript()
   },
   beforeUnmount() {
-    if (this.linkHandler) {
-      this.linkHandler.destroy()
+    if (this.tellerConnect) {
+      // Clean up if needed
     }
   },
   methods: {
@@ -118,7 +118,7 @@ export default {
     async loadAccounts() {
       if (!this.budgetId) return
       try {
-        const response = await getPlaidAccounts(this.budgetId)
+        const response = await getTellerAccounts(this.budgetId)
         this.accounts = response.data.accounts || []
       } catch (error) {
         console.error('Error loading accounts:', error)
@@ -133,71 +133,75 @@ export default {
         console.error('Error loading categories:', error)
       }
     },
-    loadPlaidScript() {
-      // Load Plaid Link script dynamically
-      if (document.getElementById('plaid-link-script')) {
+    loadTellerConnectScript() {
+      // Load Teller Connect script dynamically
+      if (document.getElementById('teller-connect-script')) {
         return
       }
 
       const script = document.createElement('script')
-      script.id = 'plaid-link-script'
-      script.src = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js'
+      script.id = 'teller-connect-script'
+      script.src = 'https://cdn.teller.io/connect/connect.js'
       script.onload = () => {
         // Script loaded, ready to use
       }
       document.head.appendChild(script)
     },
-    async openPlaidLink() {
+    async openTellerConnect() {
       if (!this.budgetId) {
         alert('Please select a budget first')
         return
       }
+      
       this.loading = true
       try {
         const response = await createLinkToken(this.budgetId)
-        const linkToken = response.data.link_token
+        
+        // Get app_id and environment from backend response
+        const tellerAppId = response.data.app_id
+        const tellerEnvironment = response.data.environment || 'production'
+        if (!tellerAppId) {
+          throw new Error('Teller App ID not configured on server')
+        }
 
-        // Wait for Plaid script to be available
-        if (typeof window.Plaid === 'undefined') {
+        // Wait for Teller Connect script to be available
+        if (typeof window.TellerConnect === 'undefined') {
           await new Promise((resolve) => {
-            const checkPlaid = setInterval(() => {
-              if (typeof window.Plaid !== 'undefined') {
-                clearInterval(checkPlaid)
+            const checkTeller = setInterval(() => {
+              if (typeof window.TellerConnect !== 'undefined') {
+                clearInterval(checkTeller)
                 resolve()
               }
             }, 100)
           })
         }
 
-        const handler = window.Plaid.create({
-          token: linkToken,
-          onSuccess: async (publicToken, metadata) => {
+        // Initialize Teller Connect
+        this.tellerConnect = window.TellerConnect.setup({
+          applicationId: tellerAppId,
+          environment: tellerEnvironment, // 'sandbox' or 'production'
+          onSuccess: async (enrollment) => {
             try {
-              await exchangePublicToken(publicToken, metadata, this.budgetId)
+              // enrollment.accessToken contains the access token
+              await exchangePublicToken(enrollment.accessToken, enrollment, this.budgetId)
               await this.loadAccounts()
               this.loading = false
               this.$emit('connected')
             } catch (error) {
-              console.error('Error exchanging token:', error)
+              console.error('Error exchanging access token:', error)
               this.loading = false
               alert('Failed to connect account. Please try again.')
             }
           },
-          onExit: (err, metadata) => {
-            if (err) {
-              console.error('Plaid Link error:', err)
-            }
+          onExit: () => {
             this.loading = false
-          },
-          onEvent: (eventName, metadata) => {
-            console.log('Plaid event:', eventName, metadata)
           }
         })
 
-        this.linkHandler = handler
-        handler.open()
+        // Open Teller Connect
+        this.tellerConnect.open()
       } catch (error) {
-        console.error('Error creating link token:', error)
+        console.error('Error creating connect token:', error)
         alert('Failed to initialize bank connection. Please try again.')
         this.loading = false
       }
@@ -216,7 +220,7 @@ export default {
         
         console.log('Syncing transactions:', { budgetId: this.budgetId, startDate, endDate })
         
-        const response = await syncPlaidTransactions(this.budgetId, startDate, endDate)
+        const response = await syncTellerTransactions(this.budgetId, startDate, endDate)
         console.log('Sync response:', response.data)
         
         if (response.data.transactions && response.data.transactions.length > 0) {
@@ -260,11 +264,11 @@ export default {
         this.importing = false
       }
     },
-    async removeAccount(itemId, institutionName) {
-      if (!this.budgetId || !itemId) return
+    async removeAccount(connectionId, institutionName) {
+      if (!this.budgetId || !connectionId) return
       
       // Count how many accounts will be removed
-      const accountsToRemove = this.accounts.filter(acc => acc.itemId === itemId)
+      const accountsToRemove = this.accounts.filter(acc => acc.connectionId === connectionId)
       const accountCount = accountsToRemove.length
       const accountNames = accountsToRemove.map(acc => acc.name).join(', ')
       
@@ -276,9 +280,9 @@ export default {
         return
       }
       
-      this.removingAccount = itemId
+      this.removingAccount = connectionId
       try {
-        await removePlaidConnection(itemId, this.budgetId)
+        await removeTellerConnection(connectionId, this.budgetId)
         await this.loadAccounts()
         this.$emit('connected') // Emit to refresh
       } catch (error) {
@@ -293,7 +297,7 @@ export default {
 </script>
 
 <style scoped>
-.plaid-connection {
+.teller-connection {
   margin-bottom: 0.75rem;
 }
 
@@ -304,7 +308,7 @@ export default {
   margin-bottom: 0.75rem;
 }
 
-.plaid-connection h3 {
+.teller-connection h3 {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;

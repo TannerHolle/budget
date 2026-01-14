@@ -26,8 +26,8 @@
               <div class="transaction-account">
                 <small>{{ transaction.accountName }} • {{ transaction.institutionName }}</small>
               </div>
-              <div v-if="transaction.plaidCategory && transaction.plaidCategory.length > 0" class="plaid-category">
-                <small>Plaid: {{ transaction.plaidCategory.join(' > ') }}</small>
+              <div v-if="transaction.tellerCategory && transaction.tellerCategory.length > 0" class="teller-category">
+                <small>Teller: {{ transaction.tellerCategory.join(' > ') }}</small>
               </div>
             </div>
             <div class="transaction-actions">
@@ -190,7 +190,7 @@ export default {
   font-size: 0.7rem;
 }
 
-.plaid-category {
+.teller-category {
   margin-top: 0.25rem;
   color: #9ca3af;
   font-size: 0.7rem;

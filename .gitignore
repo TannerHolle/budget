@@ -28,3 +28,9 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# TLS Certificates (security sensitive)
+backend/certs/*.pem
+backend/certs/*.key
+backend/certs/*.crt
+!backend/certs/.gitkeep

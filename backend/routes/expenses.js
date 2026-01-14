@@ -262,12 +262,12 @@ router.post('/bulk', auth, async (req, res) => {
 
       const expense = new Expense({
         amount: txn.amount,
-        description: txn.merchant_name || txn.name || 'Plaid Transaction',
+        description: txn.merchant_name || txn.name || 'Teller Transaction',
         category: txn.category,
         date: expenseDate,
         budgetId,
         createdBy: req.user._id,
-        plaidTransactionId: txn.transaction_id,
+        tellerTransactionId: txn.transaction_id,
         accountName: txn.accountName,
         institutionName: txn.institutionName
       });

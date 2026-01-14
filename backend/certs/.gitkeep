@@ -1,0 +1,13 @@
+# Teller.io TLS Certificates
+# 
+# Place your Teller.io client certificate and private key files here.
+# Teller provides these files when you sign up (usually in a teller.zip file):
+# - certificate.pem (or cert.pem)
+# - private_key.pem (or key.pem)
+#
+# These files are excluded from git for security.
+# Download them from your Teller.io dashboard.
+#
+# In your .env file, set:
+# TELLER_CERT_PATH=./certs/certificate.pem
+# TELLER_KEY_PATH=./certs/private_key.pem
