@@ -242,17 +242,45 @@ router.get('/accounts', auth, async (req, res) => {
       try {
         const accounts = await tellerRequest('GET', '/accounts', tokenData.accessToken);
 
-        const formattedAccounts = accounts.map(account => ({
-          account_id: account.id,
-          name: account.name || account.type,
-          type: account.type || 'depository',
-          subtype: account.subtype || account.type,
-          balance: {
-            current: account.balance ? parseFloat(account.balance) : 0,
-            available: account.balance ? parseFloat(account.balance) : 0
-          },
-          institutionName: tokenData.institutionName,
-          connectionId: tokenData.connectionId,
+        // Fetch balances for each account
+        const formattedAccounts = await Promise.all(accounts.map(async (account) => {
+          let balanceValue = 0;
+          let availableBalance = 0;
+          
+          // Fetch balance from the balances endpoint
+          try {
+            const balances = await tellerRequest('GET', `/accounts/${account.id}/balances`, tokenData.accessToken);
+            if (balances) {
+              // Teller balances structure
+              if (balances.available !== undefined && balances.available !== null) {
+                availableBalance = parseFloat(balances.available);
+              }
+              if (balances.current !== undefined && balances.current !== null) {
+                balanceValue = parseFloat(balances.current);
+              } else if (balances.ledger !== undefined && balances.ledger !== null) {
+                balanceValue = parseFloat(balances.ledger);
+              } else {
+                // Fallback to available if current/ledger not available
+                balanceValue = availableBalance;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching balance for account ${account.id}:`, error);
+            // Continue with 0 balance if fetch fails
+          }
+          
+          return {
+            account_id: account.id,
+            name: account.name || account.type,
+            type: account.type || 'depository',
+            subtype: account.subtype || account.type,
+            balance: {
+              current: balanceValue,
+              available: availableBalance || balanceValue
+            },
+            institutionName: account.institution?.name || tokenData.institutionName,
+            connectionId: tokenData.connectionId,
+          };
         }));
 
         allAccounts.push(...formattedAccounts);
