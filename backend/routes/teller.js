@@ -310,7 +310,7 @@ router.get('/transactions', auth, async (req, res) => {
           try {
             const transactions = await tellerRequest(
               'GET',
-              `/accounts/${account.id}/transactions?from=${start_date}&to=${end_date}`,
+              `/accounts/${account.id}/transactions?start_date=${start_date}&end_date=${end_date}`,
               tokenData.accessToken
             );
 
@@ -346,6 +346,8 @@ router.get('/transactions', auth, async (req, res) => {
 router.post('/sync-transactions', auth, async (req, res) => {
   try {
     const { budgetId, start_date, end_date } = req.body;
+    
+    console.log('Sync request received:', { budgetId, start_date, end_date });
 
     if (!budgetId) {
       return res.status(400).json({ error: 'budgetId is required' });
@@ -362,8 +364,19 @@ router.post('/sync-transactions', auth, async (req, res) => {
     }
 
     // Default to last 30 days if dates not provided
-    const endDate = end_date || new Date().toISOString().split('T')[0];
-    const startDate = start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = new Date();
+    const endDate = end_date || today.toISOString().split('T')[0];
+    
+    let startDate;
+    if (start_date) {
+      startDate = start_date;
+    } else {
+      const thirtyDaysAgo = new Date(today);
+      thirtyDaysAgo.setDate(today.getDate() - 30);
+      startDate = thirtyDaysAgo.toISOString().split('T')[0];
+    }
+    
+    console.log('Sync date range:', { startDate, endDate, today: today.toISOString() });
 
     // Get all existing expenses with tellerTransactionId to avoid duplicates
     const existingExpenses = await Expense.find({
@@ -408,11 +421,14 @@ router.post('/sync-transactions', auth, async (req, res) => {
 
         for (const account of accounts) {
           try {
+            const transactionsUrl = `/accounts/${account.id}/transactions?start_date=${startDate}&end_date=${endDate}`;
+            console.log(`Fetching transactions from Teller: ${transactionsUrl}`);
             const transactions = await tellerRequest(
               'GET',
-              `/accounts/${account.id}/transactions?from=${startDate}&to=${endDate}`,
+              transactionsUrl,
               tokenData.accessToken
             );
+            console.log(`Received ${transactions.length} transactions from Teller`);
 
             for (const transaction of transactions) {
               console.log('Processing transaction:', {

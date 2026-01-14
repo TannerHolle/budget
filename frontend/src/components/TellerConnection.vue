@@ -40,9 +40,21 @@
           </div>
         </div>
         <div class="sync-section">
-          <button @click="syncTransactions" class="btn btn-primary" :disabled="syncing">
-            {{ syncing ? 'Syncing...' : 'Sync Transactions' }}
-          </button>
+          <div class="sync-controls">
+            <label for="sync-days" class="sync-label">Sync last</label>
+            <input
+              id="sync-days"
+              v-model.number="syncDays"
+              type="number"
+              min="1"
+              max="365"
+              class="sync-days-input"
+            />
+            <label for="sync-days" class="sync-label">days</label>
+            <button @click="syncTransactions" class="btn btn-primary" :disabled="syncing">
+              {{ syncing ? 'Syncing...' : 'Sync Transactions' }}
+            </button>
+          </div>
           <p v-if="syncResult" class="sync-result" :class="{ 'success': syncResult.imported > 0, 'info': syncResult.imported === 0 }">
             {{ syncResult.message }}
           </p>
@@ -88,7 +100,8 @@ export default {
       removingAccount: null,
       syncResult: null,
       showCategorizeModal: false,
-      tellerConnect: null
+      tellerConnect: null,
+      syncDays: 30 // Default to 30 days
     }
   },
   watch: {
@@ -214,11 +227,23 @@ export default {
       this.syncing = true
       this.syncResult = null
       try {
-        // Sync last 30 days of transactions
-        const endDate = new Date().toISOString().split('T')[0]
-        const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        // Sync transactions for the specified number of days
+        // Use local date to avoid timezone issues
+        const today = new Date()
+        const endDate = today.toISOString().split('T')[0]
         
-        console.log('Syncing transactions:', { budgetId: this.budgetId, startDate, endDate })
+        const daysAgo = new Date(today)
+        daysAgo.setDate(today.getDate() - this.syncDays)
+        const startDate = daysAgo.toISOString().split('T')[0]
+        
+        console.log('Syncing transactions:', { 
+          budgetId: this.budgetId, 
+          startDate, 
+          endDate,
+          days: this.syncDays,
+          today: today.toISOString(),
+          daysAgo: daysAgo.toISOString()
+        })
         
         const response = await syncTellerTransactions(this.budgetId, startDate, endDate)
         console.log('Sync response:', response.data)
@@ -409,6 +434,34 @@ export default {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid #e5e7eb;
+}
+
+.sync-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sync-label {
+  font-size: 0.875rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.sync-days-input {
+  width: 60px;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.sync-days-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .sync-result {
